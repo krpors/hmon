@@ -1,16 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<hmon>
-    <http>
+<hmonconfig>
+    <monitor>
         <url>http://www.iana.org/domains/example/</url>
-        <!-- optional, default is 30 secs? -->
+        <req>./env/request1.xml</req>
         <timeout>60</timeout>
-        <!-- optional extra headers to send -->
         <headers>
             <header name="SOAPAction" value="whatevs"/>
         </headers>
         <assertions>
-            <!-- regexes -->
-            <assert>Example Domains</assert>
+            <assertion>Example Domains</assertion>
         </assertions>
-    </http>
-</hmon>
+    </monitor>
+</hmonconfig>
