@@ -1,6 +1,7 @@
 # hmon - a simplistic host monitor using content assertions
 
 The idea is basically:
+
 1. Connect to site/service over http or https
 1. Use GET or POST with data (think SOAP, yuck)
 1. Check content with configured expected response string/regex.
