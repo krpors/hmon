@@ -92,3 +92,47 @@ func TestParse(t *testing.T) {
 		t.Errorf("expecting 1 assertion")
 	}
 }
+
+func TestValidate(t *testing.T) {
+	// this XML has a few incorrect regexes, and empty/faulty urls 
+	// It should barf up 4 errors.
+	var badXml = `<?xml version="1.0" encoding="UTF-8"?>
+<hmonconfig>
+    <monitor name="Example.org index" desc="Checks iana.org example page.">
+        <url></url> <!-- empty, should fail -->
+        <req></req>
+        <timeout>60</timeout>
+        <assertions>
+            <assertion>^correct.*</assertion>
+            <assertion>in(correct</assertion>
+        </assertions>
+    </monitor> 
+    <monitor name="meh" desc="foo.">
+        <url>h ttp://malformed</url> <!-- malformed url-->
+        <req></req>
+        <timeout>60</timeout>
+        <assertions>
+            <assertion>^correct.*</assertion>
+            <assertion>(blah[)</assertion>
+        </assertions>
+    </monitor> 
+
+</hmonconfig>`
+
+	c := Config{}
+	err := xml.Unmarshal([]byte(badXml), &c)
+	if err != nil {
+		t.Error("failed to parse xml: ", err)
+	}
+
+	err = c.Validate()
+	if err == nil {
+		t.Error("should run into error")
+	}
+
+	verr := err.(ValidationError)
+
+	if len(verr.ErrorList) != 4 {
+		t.Errorf("expected 4 errors, got %d", len(verr.ErrorList))
+	}
+}

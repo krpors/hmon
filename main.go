@@ -4,12 +4,14 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
+	"os"
 )
 
 func main() {
 	contents, err := ioutil.ReadFile("conf.xml")
 	if err != nil {
 		fmt.Errorf("Fail!")
+		os.Exit(1)
 	}
 
 	c := Config{}
@@ -18,11 +20,12 @@ func main() {
 		fmt.Errorf(err.Error())
 	}
 
-	for _, cfg := range c.Monitor {
-		fmt.Println(cfg.File)
-		fmt.Println(cfg.Url)
-		fmt.Println(cfg.Timeout)
-		fmt.Println(cfg.Headers[0].Name, cfg.Headers[0].Value)
-		fmt.Println(cfg.Assertions[0])
+	err = c.Validate()
+	if err != nil {
+		verr := err.(ValidationError)
+		fmt.Println(verr)
+		for _, e := range verr.ErrorList {
+			fmt.Println("  ", e)
+		}
 	}
 }
