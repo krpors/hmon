@@ -23,6 +23,7 @@ func runCheck(m Monitor, c chan bool) {
 	requestBody, err := ioutil.ReadFile(m.File)
 	if err != nil {
 		c <- false
+		return
 	}
 	req, err := http.NewRequest("POST", m.Url, bytes.NewReader(requestBody))
 	// add all optional headers:
