@@ -5,7 +5,10 @@ import (
 	"testing"
 )
 
-var badXml = `<?xml version="1.0" encoding="UTF-8"?>
+// Just tests that unmarshalling a malformed config file should fail.
+func TestWrongXml(t *testing.T) {
+	// Simple parse error
+	var badXml = `<?xml version="1.0" encoding="UTF-8"?>
 <hmonconfig>
     <monitor name="Example.org index" desc="Checks iana.org example page.">
         <url>http://www.iana.org/domains/example/</url>
@@ -18,12 +21,22 @@ var badXml = `<?xml version="1.0" encoding="UTF-8"?>
             <assertion>Example Domains</assertion>
         </assertions>
     </monitor/> <!-- parse error should occur here -->
-</hmonconfig>
-`
+</hmonconfig>`
 
-var goodXml = `<?xml version="1.0" encoding="UTF-8"?>
+	c := Config{}
+	err := xml.Unmarshal([]byte(badXml), &c)
+	if err == nil {
+		t.Error("parsing should fail")
+	}
+}
+
+// Tests normal parsing of the configuration, and asserts that the
+// correct nodes are returned etc. Doesn't test all nodes.
+func TestParse(t *testing.T) {
+	// Correct config xml, with two monitors.
+	var goodXml = `<?xml version="1.0" encoding="UTF-8"?>
 <hmonconfig>
-    <monitor name="Example.org index" desc="Checks iana.org example page.">
+    <monitor name="first" desc="desc 1">
         <url>http://www.iana.org/domains/example/</url>
         <req>./env/request1.xml</req>
         <timeout>60</timeout>
@@ -32,9 +45,10 @@ var goodXml = `<?xml version="1.0" encoding="UTF-8"?>
         </headers>
         <assertions>
             <assertion>Example Domains</assertion>
+            <assertion>Example Domains</assertion>
         </assertions>
     </monitor>
-    <monitor name="Some site" desc="Checks something else.">
+    <monitor name="second" desc="desc 2">
         <url>http://www.example.org/</url>
         <req>./env/request1.xml</req>
         <timeout>90</timeout>
@@ -46,22 +60,35 @@ var goodXml = `<?xml version="1.0" encoding="UTF-8"?>
             <assertion>Example Domains</assertion>
         </assertions>
     </monitor>
-</hmonconfig>
-`
+</hmonconfig>`
 
-func TestWrongXml(t *testing.T) {
-	c := Config{}
-	err := xml.Unmarshal([]byte(badXml), &c)
-	if err == nil {
-		t.Error("parsing should fail")
-	}
-}
-
-func TestParse(t *testing.T) {
 	c := Config{}
 	err := xml.Unmarshal([]byte(goodXml), &c)
 	if err != nil {
 		t.Error("unmarshalling failed: ", err)
 	}
-}
 
+	if len(c.Monitor) != 2 {
+		t.Errorf("expecting 2 monitors, got %d", len(c.Monitor))
+	}
+
+	if c.Monitor[0].Name != "first" {
+		t.Errorf("requiring name '%s', got '%s'", "first", c.Monitor[0].Name)
+	}
+
+	if len(c.Monitor[0].Headers) != 1 {
+		t.Errorf("expecting 1 header")
+	}
+
+	if len(c.Monitor[1].Headers) != 2 {
+		t.Errorf("expecting 2 headers")
+	}
+
+	if len(c.Monitor[0].Assertions) != 2 {
+		t.Errorf("expecting 2 assertions")
+	}
+
+	if len(c.Monitor[1].Assertions) != 1 {
+		t.Errorf("expecting 1 assertion")
+	}
+}
