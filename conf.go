@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"net/url"
+	"os"
 	"regexp"
+	"strings"
 )
 
 // ValidationError, used to return when validation fails.
@@ -85,4 +87,37 @@ func (c *Config) Validate() error {
 
 	// ... return a nil error
 	return nil
+}
+
+// Using a base directory, finds all configuration XML files and parses them.
+// A slice of Configs are returned, or can be nil when none are found.
+func FindConfigs(baseDir string) ([]Config, error) {
+	dir, err := os.Open(baseDir)
+	if err != nil {
+		return nil, err
+	}
+
+	finfo, err := dir.Stat()
+	if !finfo.IsDir() { 
+		return nil, fmt.Errorf("`%s' is not a directory", baseDir)
+	}
+
+	finfos, err := dir.Readdir(0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list files from `%s'", baseDir)
+	}
+
+	var configurations []Config
+
+	for _, fi := range finfos {
+		// only fetch files
+		if !fi.IsDir() {
+			if strings.HasSuffix(fi.Name(), "hmon.xml") {
+				// TODO: parse file, add to list. Dont validate yet.
+			}
+		}
+	}
+
+	// TODO: return list
+	return nil, nil
 }

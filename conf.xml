@@ -1,25 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <hmonconfig>
-    <monitor name="ProvidePassengerList-v5.0">
-        <url>https://services.ute3.klm.com/passenger/ProvidePassengerList/v5.0</url>
-        <req>ppl.xml</req>
+    <monitor name="Google home check">
+        <url>http://google.com</url>
         <timeout>60</timeout>
-        <headers>
-            <header name="SOAPAction" value="http://www.af-klm.com/services/passenger/ProvidePassengerList-v5_0/getAllPassengers"/>
-        </headers>
         <assertions>
-            <assertion>GetAllPassengersResponse</assertion>
-        </assertions>
-    </monitor>
-    <monitor name="PACI-v2.0">
-        <url>https://services.ute1.klm.com/passenger/PACI/v2.0</url>
-        <req>lol.xml</req>
-        <timeout>60</timeout>
-        <headers>
-            <header name="SOAPAction" value="http://www.af-klm.com/services/passenger/PACI-v2_0/getProactiveCheckinEligibility"/>
-        </headers>
-        <assertions>
-            <assertion>Passenger details are mismatched</assertion>
+            <assertion>^&lt!doctype html</assertion>
         </assertions>
     </monitor>
 </hmonconfig>

@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/xml"
+	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -116,7 +118,6 @@ func TestValidate(t *testing.T) {
             <assertion>(blah[)</assertion>
         </assertions>
     </monitor> 
-
 </hmonconfig>`
 
 	c := Config{}
@@ -135,4 +136,54 @@ func TestValidate(t *testing.T) {
 	if len(verr.ErrorList) != 4 {
 		t.Errorf("expected 4 errors, got %d", len(verr.ErrorList))
 	}
+}
+
+func TestFindConfigs(t *testing.T) {
+	// non existant filename. Should run into error.
+	_, err := FindConfigs("0101010.0101")
+	if err == nil {
+		t.Error("expecting an error, got nil")
+	}
+
+	// write some temp configs in /tmp/. Then run FindConfigs
+	// there to parse them?
+	var goodXml = `<?xml version="1.0" encoding="UTF-8"?>
+<hmonconfig>
+    <monitor name="first" desc="desc 1">
+        <url>http://www.iana.org/domains/example/</url>
+        <req>./env/request1.xml</req>
+        <timeout>60</timeout>
+        <headers>
+            <header name="SOAPAction" value="whatevs"/>
+        </headers>
+        <assertions>
+            <assertion>Example Domains</assertion>
+        </assertions>
+    </monitor>
+</hmonconfig>
+`
+	file1 := "/tmp/groupone_hmon.xml"
+	file2 := "/tmp/grouptwo_hmon.xml"
+	err = ioutil.WriteFile(file1, []byte(goodXml), 0644)
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.Remove(file1)
+	err = ioutil.WriteFile(file2, []byte(goodXml), 0644)
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.Remove(file2)
+
+	// files created, run the Find. Should result in two files.
+	configs, err := FindConfigs("/tmp/")
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(configs) != 2 {
+		t.Errorf("expected 2 configurations, got %d", len(configs))
+	}
+
+	// TODO: more tests?
 }

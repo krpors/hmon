@@ -13,19 +13,34 @@ import (
 // timeout dialer, see https://groups.google.com/forum/?fromgroups=#!topic/golang-nuts/2ehqb6t54kA
 
 // future flags:
-// - conf file
+// - conf file dire
 // - basedir for request files
 
 // Runs a check for the given monitor. TODO: the channel must be something better,
 // with more informative stuff.
 func runCheck(m Monitor, c chan bool) {
 	client := http.Client{}
-	requestBody, err := ioutil.ReadFile(m.File)
+
+	// when no file is specified, do a GET
+	var req *http.Request
+	var err error
+
+	if m.File == "" {
+		req, err = http.NewRequest("GET", m.Url, nil)
+	} else {
+		requestBody, err := ioutil.ReadFile(m.File)
+		if err != nil {
+			c <- false
+			return
+		}
+		req, err = http.NewRequest("POST", m.Url, bytes.NewReader(requestBody))
+	}
+
 	if err != nil {
 		c <- false
 		return
 	}
-	req, err := http.NewRequest("POST", m.Url, bytes.NewReader(requestBody))
+
 	// add all optional headers:
 	for _, header := range m.Headers {
 		req.Header.Add(header.Name, header.Value)
@@ -36,7 +51,8 @@ func runCheck(m Monitor, c chan bool) {
 
 	responseContents, err := ioutil.ReadAll(resp.Body)
 
-	// whether the response validates against the assertions
+	// whether the response validates against the assertions.
+	// When no assertions are given, just check if the site/host is up.
 	for _, re := range m.Assertions {
 		// at this point, compilation of the regular expression must succeed,
 		// since we already executed a Validate() on the configuration itself.
@@ -49,8 +65,10 @@ func runCheck(m Monitor, c chan bool) {
 		}
 	}
 
+	// passed all tests, return true to the channel
 	c <- true
 }
+
 
 func main() {
 	contents, err := ioutil.ReadFile("conf.xml")
