@@ -1,14 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <hmonconfig>
-    <monitor name="Example.org index" desc="Checks iana.org example page.">
-        <url>http://www.iana.org/domains/example/</url>
-        <req>./env/request1.xml</req>
+    <monitor name="ProvidePassengerList-v5.0">
+        <url>https://services.ute3.klm.com/passenger/ProvidePassengerList/v5.0</url>
+        <req>ppl.xml</req>
         <timeout>60</timeout>
         <headers>
-            <header name="SOAPAction" value="whatevs"/>
+            <header name="SOAPAction" value="http://www.af-klm.com/services/passenger/ProvidePassengerList-v5_0/getAllPassengers"/>
         </headers>
         <assertions>
-            <assertion>Example Domains</assertion>
+            <assertion>GetAllPassengersResponse</assertion>
+        </assertions>
+    </monitor>
+    <monitor name="PACI-v2.0">
+        <url>https://services.ute1.klm.com/passenger/PACI/v2.0</url>
+        <req>lol.xml</req>
+        <timeout>60</timeout>
+        <headers>
+            <header name="SOAPAction" value="http://www.af-klm.com/services/passenger/PACI-v2_0/getProactiveCheckinEligibility"/>
+        </headers>
+        <assertions>
+            <assertion>Passenger details are mismatched</assertion>
         </assertions>
     </monitor>
 </hmonconfig>

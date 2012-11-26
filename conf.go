@@ -57,6 +57,10 @@ func (c *Config) Validate() error {
 	verr := ValidationError{}
 
 	for monidx, mon := range c.Monitor {
+		if mon.Name == "" {
+			verr.Add(fmt.Sprintf("monitor[%d]: must have a non-empty name attribute", monidx))
+		}
+
 		if mon.Url == "" {
 			verr.Add(fmt.Sprintf("monitor[%d]: empty url", monidx))
 		} else {
