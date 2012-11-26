@@ -6,23 +6,6 @@ import (
 	"io/ioutil"
 )
 
-type Config struct {
-	Monitor []Monitor `xml:"monitor"`
-}
-
-type Monitor struct {
-	Url        string   `xml:"url"`
-	File       string   `xml:"req"`
-	Timeout    int      `xml:"timeout"`
-	Headers    []Header `xml:"headers>header"`
-	Assertions []string `xml:"assertions>assertion"`
-}
-
-type Header struct {
-	Name  string `xml:"name,attr"`
-	Value string `xml:"value,attr"`
-}
-
 func main() {
 	contents, err := ioutil.ReadFile("conf.xml")
 	if err != nil {
