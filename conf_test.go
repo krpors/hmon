@@ -8,31 +8,6 @@ import (
 	"testing"
 )
 
-// Just tests that unmarshalling a malformed config file should fail.
-func TestWrongXml(t *testing.T) {
-	// Simple parse error
-	var badXml = `<?xml version="1.0" encoding="UTF-8"?>
-<hmonconfig name="hehe">
-    <monitor name="Example.org index" desc="Checks iana.org example page.">
-        <url>http://www.iana.org/domains/example/</url>
-        <file>./env/request1.xml</file>
-        <timeout>60</timeout>
-        <headers>
-            <header name="SOAPAction" value="whatevs"/>
-        </headers>
-        <assertions>
-            <assertion>Example Domains</assertion>
-        </assertions>
-    </monitor/> <!-- parse error should occur here -->
-</hmonconfig>`
-
-	c := Config{}
-	err := xml.Unmarshal([]byte(badXml), &c)
-	if err == nil {
-		t.Error("parsing should fail")
-	}
-}
-
 // Tests normal parsing of the configuration, and asserts that the
 // correct nodes are returned etc. Doesn't test all nodes.
 func TestParse(t *testing.T) {
@@ -100,46 +75,46 @@ func TestParse(t *testing.T) {
 	}
 }
 
+// Test the Validate() function on a Config struct.
 func TestValidate(t *testing.T) {
 	// this XML has a few incorrect regexes, and empty/faulty urls 
-	// It should barf up 5 errors.
-	var badXml = `<?xml version="1.0" encoding="UTF-8"?>
-<hmonconfig> <!-- missing name attribute here -->
-    <monitor name="Example.org index" desc="Checks iana.org example page.">
-        <url></url> <!-- empty, should fail -->
-        <file></file>
-        <timeout>60</timeout>
-        <assertions>
-            <assertion>^correct.*</assertion>
-            <assertion>in(correct</assertion>
-        </assertions>
-    </monitor> 
-    <monitor name="meh" desc="foo.">
-        <url>h ttp://malformed</url> <!-- malformed url-->
-        <file></file>
-        <timeout>60</timeout>
-        <assertions>
-            <assertion>^correct.*</assertion>
-            <assertion>(blah[)</assertion>
-        </assertions>
-    </monitor> 
-</hmonconfig>`
+	// It should barf up 6 errors.
+	badConfig := Config{}
 
-	c := Config{}
-	err := xml.Unmarshal([]byte(badXml), &c)
-	if err != nil {
-		t.Error("failed to parse xml: ", err)
-	}
+	badConfig.Name = "" // empty name attribute, should fail
 
-	err = c.Validate()
+	mon := Monitor{}
+	mon.Name = "Some stuff"
+	mon.Description = "desc"
+	mon.Url = "" // empty, should fail
+	mon.File = ""
+	mon.Timeout = 60
+	mon.Assertions = append(mon.Assertions, "^correct")
+	mon.Assertions = append(mon.Assertions, "in(correct") // should fail
+
+	badConfig.Monitors = append(badConfig.Monitors, mon)
+
+	mon = Monitor{}
+	mon.Name = "" // empty name, should fail
+	mon.Description = "desc"
+	mon.Url = "h ttp://malformed" // malformed, should fail
+	mon.File = ""
+	mon.Timeout = 60
+	mon.Assertions = append(mon.Assertions, "^correct.*")
+	mon.Assertions = append(mon.Assertions, "(blah[)") // should fail
+
+	badConfig.Monitors = append(badConfig.Monitors, mon)
+
+
+	err := badConfig.Validate()
 	if err == nil {
 		t.Error("should run into error")
 	}
 
 	verr := err.(ValidationError)
 
-	if len(verr.ErrorList) != 5 {
-		t.Errorf("expected 5 errors, got %d", len(verr.ErrorList))
+	if len(verr.ErrorList) != 6 {
+		t.Errorf("expected 6 errors, got %d", len(verr.ErrorList))
 	}
 }
 
