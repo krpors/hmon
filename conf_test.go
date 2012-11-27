@@ -71,27 +71,27 @@ func TestParse(t *testing.T) {
 		t.Error("unmarshalling failed: ", err)
 	}
 
-	if len(c.Monitor) != 2 {
-		t.Errorf("expecting 2 monitors, got %d", len(c.Monitor))
+	if len(c.Monitors) != 2 {
+		t.Errorf("expecting 2 monitors, got %d", len(c.Monitors))
 	}
 
-	if c.Monitor[0].Name != "first" {
-		t.Errorf("requiring name '%s', got '%s'", "first", c.Monitor[0].Name)
+	if c.Monitors[0].Name != "first" {
+		t.Errorf("requiring name '%s', got '%s'", "first", c.Monitors[0].Name)
 	}
 
-	if len(c.Monitor[0].Headers) != 1 {
+	if len(c.Monitors[0].Headers) != 1 {
 		t.Errorf("expecting 1 header")
 	}
 
-	if len(c.Monitor[1].Headers) != 2 {
+	if len(c.Monitors[1].Headers) != 2 {
 		t.Errorf("expecting 2 headers")
 	}
 
-	if len(c.Monitor[0].Assertions) != 2 {
+	if len(c.Monitors[0].Assertions) != 2 {
 		t.Errorf("expecting 2 assertions")
 	}
 
-	if len(c.Monitor[1].Assertions) != 1 {
+	if len(c.Monitors[1].Assertions) != 1 {
 		t.Errorf("expecting 1 assertion")
 	}
 
@@ -102,9 +102,9 @@ func TestParse(t *testing.T) {
 
 func TestValidate(t *testing.T) {
 	// this XML has a few incorrect regexes, and empty/faulty urls 
-	// It should barf up 4 errors.
+	// It should barf up 5 errors.
 	var badXml = `<?xml version="1.0" encoding="UTF-8"?>
-<hmonconfig>
+<hmonconfig> <!-- missing name attribute here -->
     <monitor name="Example.org index" desc="Checks iana.org example page.">
         <url></url> <!-- empty, should fail -->
         <file></file>
@@ -138,8 +138,8 @@ func TestValidate(t *testing.T) {
 
 	verr := err.(ValidationError)
 
-	if len(verr.ErrorList) != 4 {
-		t.Errorf("expected 4 errors, got %d", len(verr.ErrorList))
+	if len(verr.ErrorList) != 5 {
+		t.Errorf("expected 5 errors, got %d", len(verr.ErrorList))
 	}
 }
 
@@ -158,7 +158,7 @@ func TestFindConfigs(t *testing.T) {
 	// write some temp configs in /tmp/. Then run FindConfigs
 	// there to parse them?
 	var goodXml = `<?xml version="1.0" encoding="UTF-8"?>
-<hmonconfig>
+<hmonconfig name="MiMaMeh">
     <monitor name="first" desc="desc 1">
         <url>http://www.iana.org/domains/example/</url>
         <file>./env/request1.xml</file>
