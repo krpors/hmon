@@ -95,7 +95,7 @@ func TestParse(t *testing.T) {
 		t.Errorf("expecting 1 assertion")
 	}
 
-	if (c.Name != "hehe") {
+	if c.Name != "hehe" {
 		t.Errorf("expecting montior name `hehe', got `%s`", c.Name)
 	}
 }

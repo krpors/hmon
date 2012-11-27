@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path"
 	"regexp"
 )
 
@@ -16,6 +17,22 @@ var (
 	validateOnly = flag.Bool("validate", false, "When specified, only validate the configuration file(s), but don't run the monitors.")
 )
 
+// Type Result encapsulates information about a Monitor and its invocation result. 
+type Result struct {
+	Monitor *Monitor // the monitor which may or may not have failed
+	Valid   bool     // ok or not ok?
+	Error   error    // An error, describing the possible failure. If empty, it's ok.
+}
+
+// Returns the result as a string for some easy-peasy debuggin'.
+func (r Result) String() string {
+	if r.Error == nil {
+		return fmt.Sprintf("ok    %s", r.Monitor.Name)
+	}
+
+	return fmt.Sprintf("FAIL  %s: %s", r.Monitor.Name, r.Error)
+}
+
 // timeout dialer, see https://groups.google.com/forum/?fromgroups=#!topic/golang-nuts/2ehqb6t54kA
 
 // Runs a check for the given Monitor. There are a few things done in this function.
@@ -24,10 +41,7 @@ var (
 // file's contents. If there are any assertions configured, all the assertions are used
 // to test the content. If none are configured, it will just be a sort of 'ping-check',
 // i.e. checking if a connection could be made to the URL.
-//
-// TODO: channel must be of a more informative content, instead of just a bool. 
-// There's no way now to (asynchronously) check which monitor failed or succeeded.
-func runCheck(m *Monitor, c chan bool) {
+func runCheck(m *Monitor, baseDir string, c chan Result) {
 	client := http.Client{}
 
 	// when no file is specified, do a GET
@@ -37,16 +51,16 @@ func runCheck(m *Monitor, c chan bool) {
 	if m.File == "" {
 		req, err = http.NewRequest("GET", m.Url, nil)
 	} else {
-		requestBody, err := ioutil.ReadFile(m.File)
+		requestBody, err := ioutil.ReadFile(path.Join(baseDir, m.File))
 		if err != nil {
-			c <- false
+			c <- Result{m, false, err}
 			return
 		}
 		req, err = http.NewRequest("POST", m.Url, bytes.NewReader(requestBody))
 	}
 
 	if err != nil {
-		c <- false
+		c <- Result{m, false, err}
 		return
 	}
 
@@ -57,7 +71,7 @@ func runCheck(m *Monitor, c chan bool) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		c <- false
+		c <- Result{m, false, err}
 		return
 	}
 	defer resp.Body.Close()
@@ -73,13 +87,13 @@ func runCheck(m *Monitor, c chan bool) {
 		rex := regexp.MustCompile(m.Assertions[i])
 		found := rex.Find(responseContents)
 		if found == nil {
-			c <- false
+			c <- Result{m, false, fmt.Errorf("assertion failed for regex `%s'", m.Assertions[i])}
 			return
 		}
 	}
 
 	// passed all tests, return true to the channel
-	c <- true
+	c <- Result{m, true, nil}
 }
 
 func localtest() {
@@ -89,9 +103,9 @@ func localtest() {
 	monitor.Url = "http://omgwtfbbqz.nl"
 	monitor.Assertions = append(monitor.Assertions, "teaaaast")
 
-	ch := make(chan bool, 1)
+	ch := make(chan Result, 1)
 
-	runCheck(&monitor, ch)
+	runCheck(&monitor, "", ch)
 
 	fmt.Println(<-ch)
 }
@@ -157,15 +171,16 @@ func main() {
 	}
 
 	for _, c := range configurations {
+		fmt.Println("Running monitors:", c.Name)
+
 		// receiver channel
-		ch := make(chan bool, len(c.Monitors))
+		ch := make(chan Result, len(c.Monitors))
 
 		for i := range c.Monitors {
-			go runCheck(&c.Monitors[i], ch)
+			go runCheck(&c.Monitors[i], *reqdir, ch)
 		}
 
-		// read from the channel until all monitors have sent
-		// their response
+		// read from the channel until all monitors have sent their response
 		for _ = range c.Monitors {
 			fmt.Println(<-ch)
 		}
