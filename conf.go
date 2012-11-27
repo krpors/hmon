@@ -1,9 +1,12 @@
 package main
 
 import (
+	"encoding/xml"
 	"fmt"
+	"io/ioutil"
 	"net/url"
 	"os"
+	"path"
 	"regexp"
 	"strings"
 )
@@ -31,7 +34,11 @@ func (e ValidationError) Error() string {
 // Root configuration node, contains zero or more Monitor
 // structs.
 type Config struct {
-	Monitor []Monitor `xml:"monitor"`
+	// The original filename (basename)
+	FileName string
+
+	Name     string    `xml:"name,attr"`
+	Monitors []Monitor `xml:"monitor"`
 }
 
 // Monitor node with its children. All slices can be zero or more,
@@ -41,10 +48,14 @@ type Monitor struct {
 	Name        string   `xml:"name,attr"`
 	Description string   `xml:"desc,attr"`
 	Url         string   `xml:"url"`
-	File        string   `xml:"req"`
+	File        string   `xml:"file"`
 	Timeout     int      `xml:"timeout"`
 	Headers     []Header `xml:"headers>header"`
 	Assertions  []string `xml:"assertions>assertion"`
+}
+
+func (m Monitor) String() string {
+	return fmt.Sprintf("%s (%s), %d headers, %d assertions", m.Name, m.Url, len(m.Headers), len(m.Assertions))
 }
 
 // Extra HTTP headers to send.
@@ -58,7 +69,12 @@ type Header struct {
 func (c *Config) Validate() error {
 	verr := ValidationError{}
 
-	for monidx, mon := range c.Monitor {
+	if strings.TrimSpace(c.Name) == "" {
+		verr.Add("root node hmonconfig requires a non-empty name attribute")
+	}
+
+	for monidx := range c.Monitors {
+		mon := c.Monitors[monidx]
 		if mon.Name == "" {
 			verr.Add(fmt.Sprintf("monitor[%d]: must have a non-empty name attribute", monidx))
 		}
@@ -72,8 +88,8 @@ func (c *Config) Validate() error {
 			}
 		}
 
-		for assidx, assert := range mon.Assertions {
-			_, err := regexp.Compile(assert)
+		for assidx := range mon.Assertions {
+			_, err := regexp.Compile(mon.Assertions[assidx])
 			if err != nil {
 				verr.Add(fmt.Sprintf("monitor[%d]/assertion[%d]: invalid regex: %s", monidx, assidx, err))
 			}
@@ -90,7 +106,8 @@ func (c *Config) Validate() error {
 }
 
 // Using a base directory, finds all configuration XML files and parses them.
-// A slice of Configs are returned, or can be nil when none are found.
+// A slice of Configs are returned. Obviously, if the slice length is zero,
+// and the error is non-nil, no configurations are found.
 func FindConfigs(baseDir string) ([]Config, error) {
 	dir, err := os.Open(baseDir)
 	if err != nil {
@@ -98,7 +115,7 @@ func FindConfigs(baseDir string) ([]Config, error) {
 	}
 
 	finfo, err := dir.Stat()
-	if !finfo.IsDir() { 
+	if !finfo.IsDir() {
 		return nil, fmt.Errorf("`%s' is not a directory", baseDir)
 	}
 
@@ -107,17 +124,34 @@ func FindConfigs(baseDir string) ([]Config, error) {
 		return nil, fmt.Errorf("failed to list files from `%s'", baseDir)
 	}
 
-	var configurations []Config
+	var configurations = make([]Config, 0)
 
 	for _, fi := range finfos {
 		// only fetch files
 		if !fi.IsDir() {
 			if strings.HasSuffix(fi.Name(), "hmon.xml") {
-				// TODO: parse file, add to list. Dont validate yet.
+				fullFile := path.Join(baseDir, fi.Name())
+				contents, err := ioutil.ReadFile(fullFile)
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+
+				c := Config{}
+				c.FileName = fi.Name()
+				err = xml.Unmarshal(contents, &c)
+				if err != nil {
+					// when one or more config files can't be
+					// parsed, bail out!
+					return nil, fmt.Errorf("failed to parse file `%s': %s", fullFile, err)
+				}
+
+				// else we can just add it to the parsed configurations
+				// slice and continue.
+				configurations = append(configurations, c)
 			}
 		}
 	}
 
-	// TODO: return list
-	return nil, nil
+	return configurations, nil
 }

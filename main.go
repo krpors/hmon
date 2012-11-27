@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"encoding/xml"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -10,15 +10,24 @@ import (
 	"regexp"
 )
 
+var (
+	confdir      = flag.String("confdir", ".", "Directory with configurations of *_hmon.xml files.")
+	reqdir       = flag.String("reqdir", ".", "Base directory to search for request files. If ommited, the current working directory is used.")
+	validateOnly = flag.Bool("validate", false, "When specified, only validate the configuration file(s), but don't run the monitors.")
+)
+
 // timeout dialer, see https://groups.google.com/forum/?fromgroups=#!topic/golang-nuts/2ehqb6t54kA
 
-// future flags:
-// - conf file dire
-// - basedir for request files
-
-// Runs a check for the given monitor. TODO: the channel must be something better,
-// with more informative stuff.
-func runCheck(m Monitor, c chan bool) {
+// Runs a check for the given Monitor. There are a few things done in this function.
+// If the given input file is empty (i.e. none), a http GET is issued to the given URL.
+// If a file is given though, this will become a http POST, with the post-data being the
+// file's contents. If there are any assertions configured, all the assertions are used
+// to test the content. If none are configured, it will just be a sort of 'ping-check',
+// i.e. checking if a connection could be made to the URL.
+//
+// TODO: channel must be of a more informative content, instead of just a bool. 
+// There's no way now to (asynchronously) check which monitor failed or succeeded.
+func runCheck(m *Monitor, c chan bool) {
 	client := http.Client{}
 
 	// when no file is specified, do a GET
@@ -42,22 +51,26 @@ func runCheck(m Monitor, c chan bool) {
 	}
 
 	// add all optional headers:
-	for _, header := range m.Headers {
-		req.Header.Add(header.Name, header.Value)
+	for i := range m.Headers {
+		req.Header.Add(m.Headers[i].Name, m.Headers[i].Value)
 	}
 
 	resp, err := client.Do(req)
+	if err != nil {
+		c <- false
+		return
+	}
 	defer resp.Body.Close()
 
 	responseContents, err := ioutil.ReadAll(resp.Body)
 
 	// whether the response validates against the assertions.
 	// When no assertions are given, just check if the site/host is up.
-	for _, re := range m.Assertions {
+	for i := range m.Assertions {
 		// at this point, compilation of the regular expression must succeed,
 		// since we already executed a Validate() on the configuration itself.
 		// To make things sure, we do a MustCompile though.
-		rex := regexp.MustCompile(re)
+		rex := regexp.MustCompile(m.Assertions[i])
 		found := rex.Find(responseContents)
 		if found == nil {
 			c <- false
@@ -69,39 +82,93 @@ func runCheck(m Monitor, c chan bool) {
 	c <- true
 }
 
+func localtest() {
+	monitor := Monitor{}
+	monitor.Name = "Test"
+	monitor.Description = "Test"
+	monitor.Url = "http://omgwtfbbqz.nl"
+	monitor.Assertions = append(monitor.Assertions, "teaaaast")
 
-func main() {
-	contents, err := ioutil.ReadFile("conf.xml")
-	if err != nil {
-		fmt.Errorf("Fail!")
+	ch := make(chan bool, 1)
+
+	runCheck(&monitor, ch)
+
+	fmt.Println(<-ch)
+}
+
+// Validates all configurations in the slice. For every failed validation,
+// print it out to stdout. If any failures occured, simply bail out.
+func validateConfigurations(configurations *[]Config) {
+	if len(*configurations) == 0 {
+		fmt.Printf("No configurations found were found in `%s'\n", *confdir)
+		fmt.Printf("Note that only files with suffix *_hmon.xml are parsed.\n")
 		os.Exit(1)
 	}
 
-	c := Config{}
-	err = xml.Unmarshal(contents, &c)
-	if err != nil {
-		fmt.Errorf(err.Error())
+	// boolean indicating that configurations are not valid.
+	var success bool = true
+	var totalerrs int8 = 0
+
+	for i := range *configurations {
+		c := (*configurations)[i]
+		err := c.Validate()
+		if err != nil {
+			// we got validation errors.
+			verr := err.(ValidationError)
+			fmt.Printf("%s: %s\n", c.FileName, verr)
+			for i := range verr.ErrorList {
+				fmt.Printf("  %s\n", verr.ErrorList[i])
+				totalerrs++
+			}
+
+			success = false
+		}
 	}
 
-	err = c.Validate()
+	if !success {
+		fmt.Printf("\nFailed due to a total of %d validation errors.\n", totalerrs)
+		os.Exit(1)
+	}
+
+	// Is a flag provided that we only should do configuration validation?
+	if *validateOnly {
+		// if so, no point in continuing. Exit code 0 to indicate an a-okay.
+		fmt.Println("ok")
+		os.Exit(0)
+	}
+}
+
+func main() {
+	flag.Parse()
+
+	// First, find the configurations from the confdir. Bail if anything fails.
+	configurations, err := FindConfigs(*confdir)
 	if err != nil {
-		verr := err.(ValidationError)
-		fmt.Println(verr)
-		for _, e := range verr.ErrorList {
-			fmt.Println("  ", e)
+		fmt.Printf("Unable to find/parse configuration files. Nested error is: %s\n", err)
+		os.Exit(1)
+	}
+
+	validateConfigurations(&configurations)
+
+	_, err = os.Open(*reqdir)
+	if err != nil {
+		fmt.Printf("Failed to open request directory. Nested error is: %s\n", err)
+		os.Exit(1)
+	}
+
+	for _, c := range configurations {
+		// receiver channel
+		ch := make(chan bool, len(c.Monitors))
+
+		for i := range c.Monitors {
+			go runCheck(&c.Monitors[i], ch)
 		}
 
-		os.Exit(2)
-	}
+		// read from the channel until all monitors have sent
+		// their response
+		for _ = range c.Monitors {
+			fmt.Println(<-ch)
+		}
 
-	ch := make(chan bool, len(c.Monitor))
-
-	// commence
-	for _, monitor := range c.Monitor {
-		go runCheck(monitor, ch)
-	}
-
-	for i := 0; i < len(c.Monitor); i++ {
-		fmt.Println(<-ch)
 	}
 }

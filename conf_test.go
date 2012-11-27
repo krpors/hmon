@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"io/ioutil"
 	"os"
+	"path"
 	"testing"
 )
 
@@ -11,10 +12,10 @@ import (
 func TestWrongXml(t *testing.T) {
 	// Simple parse error
 	var badXml = `<?xml version="1.0" encoding="UTF-8"?>
-<hmonconfig>
+<hmonconfig name="hehe">
     <monitor name="Example.org index" desc="Checks iana.org example page.">
         <url>http://www.iana.org/domains/example/</url>
-        <req>./env/request1.xml</req>
+        <file>./env/request1.xml</file>
         <timeout>60</timeout>
         <headers>
             <header name="SOAPAction" value="whatevs"/>
@@ -37,10 +38,10 @@ func TestWrongXml(t *testing.T) {
 func TestParse(t *testing.T) {
 	// Correct config xml, with two monitors.
 	var goodXml = `<?xml version="1.0" encoding="UTF-8"?>
-<hmonconfig>
+<hmonconfig name="hehe">
     <monitor name="first" desc="desc 1">
         <url>http://www.iana.org/domains/example/</url>
-        <req>./env/request1.xml</req>
+        <file>./env/request1.xml</file>
         <timeout>60</timeout>
         <headers>
             <header name="SOAPAction" value="whatevs"/>
@@ -52,7 +53,7 @@ func TestParse(t *testing.T) {
     </monitor>
     <monitor name="second" desc="desc 2">
         <url>http://www.example.org/</url>
-        <req>./env/request1.xml</req>
+        <file>./env/request1.xml</file>
         <timeout>90</timeout>
         <headers>
             <header name="SOAPAction" value="ping"/>
@@ -93,6 +94,10 @@ func TestParse(t *testing.T) {
 	if len(c.Monitor[1].Assertions) != 1 {
 		t.Errorf("expecting 1 assertion")
 	}
+
+	if (c.Name != "hehe") {
+		t.Errorf("expecting montior name `hehe', got `%s`", c.Name)
+	}
 }
 
 func TestValidate(t *testing.T) {
@@ -102,7 +107,7 @@ func TestValidate(t *testing.T) {
 <hmonconfig>
     <monitor name="Example.org index" desc="Checks iana.org example page.">
         <url></url> <!-- empty, should fail -->
-        <req></req>
+        <file></file>
         <timeout>60</timeout>
         <assertions>
             <assertion>^correct.*</assertion>
@@ -111,7 +116,7 @@ func TestValidate(t *testing.T) {
     </monitor> 
     <monitor name="meh" desc="foo.">
         <url>h ttp://malformed</url> <!-- malformed url-->
-        <req></req>
+        <file></file>
         <timeout>60</timeout>
         <assertions>
             <assertion>^correct.*</assertion>
@@ -138,6 +143,11 @@ func TestValidate(t *testing.T) {
 	}
 }
 
+// This test function write two configuration files called groupone_hmon.xml
+// and grouptwo_hmon.xml in the OS's/environment's temporary directory. This
+// test then expects two correctly parsed configuration files.
+//
+// The two configuration files are automatically deleted.
 func TestFindConfigs(t *testing.T) {
 	// non existant filename. Should run into error.
 	_, err := FindConfigs("0101010.0101")
@@ -151,7 +161,7 @@ func TestFindConfigs(t *testing.T) {
 <hmonconfig>
     <monitor name="first" desc="desc 1">
         <url>http://www.iana.org/domains/example/</url>
-        <req>./env/request1.xml</req>
+        <file>./env/request1.xml</file>
         <timeout>60</timeout>
         <headers>
             <header name="SOAPAction" value="whatevs"/>
@@ -162,8 +172,8 @@ func TestFindConfigs(t *testing.T) {
     </monitor>
 </hmonconfig>
 `
-	file1 := "/tmp/groupone_hmon.xml"
-	file2 := "/tmp/grouptwo_hmon.xml"
+	file1 := path.Join(os.TempDir(), "groupone_hmon.xml")
+	file2 := path.Join(os.TempDir(), "grouptwo_hmon.xml")
 	err = ioutil.WriteFile(file1, []byte(goodXml), 0644)
 	if err != nil {
 		t.Error(err)
@@ -176,7 +186,7 @@ func TestFindConfigs(t *testing.T) {
 	defer os.Remove(file2)
 
 	// files created, run the Find. Should result in two files.
-	configs, err := FindConfigs("/tmp/")
+	configs, err := FindConfigs(os.TempDir())
 	if err != nil {
 		t.Error(err)
 	}
@@ -185,5 +195,11 @@ func TestFindConfigs(t *testing.T) {
 		t.Errorf("expected 2 configurations, got %d", len(configs))
 	}
 
-	// TODO: more tests?
+	// check validity as well just in case.
+	for _, config := range configs {
+		err = config.Validate()
+		if err != nil {
+			t.Errorf("validation failed for configuration")
+		}
+	}
 }
