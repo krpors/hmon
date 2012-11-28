@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"time"
 )
 
 var (
@@ -19,15 +20,19 @@ var (
 
 // Type Result encapsulates information about a Monitor and its invocation result. 
 type Result struct {
-	Monitor *Monitor // the monitor which may or may not have failed
-	Valid   bool     // ok or not ok?
-	Error   error    // An error, describing the possible failure. If empty, it's ok.
+	Monitor *Monitor      // the monitor which may or may not have failed.
+	Latency time.Duration // The latency of the call i.e. how long did it take.
+	Error   error         // An error, describing the possible failure. If nil, it's ok.
 }
 
 // Returns the result as a string for some easy-peasy debuggin'.
 func (r Result) String() string {
 	if r.Error == nil {
-		return fmt.Sprintf("ok    %s", r.Monitor.Name)
+		return fmt.Sprintf("ok    %s (%v)", r.Monitor.Name, r.Latency)
+	}
+
+	if r.Latency > 0 {
+		return fmt.Sprintf("FAIL  %s: %s (%v)", r.Monitor.Name, r.Error, r.Latency)
 	}
 
 	return fmt.Sprintf("FAIL  %s: %s", r.Monitor.Name, r.Error)
@@ -53,14 +58,14 @@ func runCheck(m *Monitor, baseDir string, c chan Result) {
 	} else {
 		requestBody, err := ioutil.ReadFile(path.Join(baseDir, m.File))
 		if err != nil {
-			c <- Result{m, false, err}
+			c <- Result{m, 0, err}
 			return
 		}
 		req, err = http.NewRequest("POST", m.Url, bytes.NewReader(requestBody))
 	}
 
 	if err != nil {
-		c <- Result{m, false, err}
+		c <- Result{m, 0, err}
 		return
 	}
 
@@ -69,9 +74,12 @@ func runCheck(m *Monitor, baseDir string, c chan Result) {
 		req.Header.Add(m.Headers[i].Name, m.Headers[i].Value)
 	}
 
+	// start measuring time from this point:
+	tstart := time.Now()
+
 	resp, err := client.Do(req)
 	if err != nil {
-		c <- Result{m, false, err}
+		c <- Result{m, 0, err}
 		return
 	}
 	defer resp.Body.Close()
@@ -87,27 +95,13 @@ func runCheck(m *Monitor, baseDir string, c chan Result) {
 		rex := regexp.MustCompile(m.Assertions[i])
 		found := rex.Find(responseContents)
 		if found == nil {
-			c <- Result{m, false, fmt.Errorf("assertion failed for regex `%s'", m.Assertions[i])}
+			c <- Result{m, time.Now().Sub(tstart), fmt.Errorf("assertion failed for regex `%s'", m.Assertions[i])}
 			return
 		}
 	}
 
 	// passed all tests, return true to the channel
-	c <- Result{m, true, nil}
-}
-
-func localtest() {
-	monitor := Monitor{}
-	monitor.Name = "Test"
-	monitor.Description = "Test"
-	monitor.Url = "http://omgwtfbbqz.nl"
-	monitor.Assertions = append(monitor.Assertions, "teaaaast")
-
-	ch := make(chan Result, 1)
-
-	runCheck(&monitor, "", ch)
-
-	fmt.Println(<-ch)
+	c <- Result{m, time.Now().Sub(tstart), nil}
 }
 
 // Validates all configurations in the slice. For every failed validation,
