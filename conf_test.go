@@ -105,7 +105,6 @@ func TestValidate(t *testing.T) {
 
 	badConfig.Monitors = append(badConfig.Monitors, mon)
 
-
 	err := badConfig.Validate()
 	if err == nil {
 		t.Error("should run into error")
