@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
@@ -65,6 +66,9 @@ type Monitor struct {
 // file's contents. If there are any assertions configured, all the assertions are used
 // to test the content. If none are configured, it will just be a sort of 'ping-check',
 // i.e. checking if a connection could be made to the URL.
+//
+//  TODO is this pointer receiver really necessary? I don't think so. We're not changing
+// the `m' anyway.
 func (m *Monitor) Run(baseDir string, c chan Result) {
 	client := http.Client{}
 
@@ -261,18 +265,62 @@ type ResultProcessor interface {
 
 // Default processor (outputs default stuff to stdout).
 type DefaultProcessor struct {
+	countOk   int16 // amount of OKs
+	countFail int16 // amount of failures
 }
 
-func (p DefaultProcessor) Started() {
+func (p *DefaultProcessor) Started() {
 }
 
-func (p DefaultProcessor) ProcessConfig(c *Config) {
+func (p *DefaultProcessor) ProcessConfig(c *Config) {
 	fmt.Printf("Processing config `%s'\n", (*c).Name)
 }
 
-func (p DefaultProcessor) ProcessResult(r *Result) {
+func (p *DefaultProcessor) ProcessResult(r *Result) {
+	if r.Error == nil {
+		p.countOk++
+	} else {
+		p.countFail++
+	}
 	fmt.Printf("%s\n", *r)
 }
 
-func (p DefaultProcessor) Finished() {
+func (p *DefaultProcessor) Finished() {
+	fmt.Printf("\nFinished with %d successes and %d errors.\n", p.countOk, p.countFail)
+}
+
+// Outputs Results to CSV format on stdout.
+type CsvProcessor struct {
+	writer     *csv.Writer
+	currConfig *Config
+}
+
+func (p *CsvProcessor) Started() {
+	// initialize a new writer.
+	p.writer = csv.NewWriter(os.Stdout)
+}
+
+func (p *CsvProcessor) ProcessConfig(c *Config) {
+	p.currConfig = c
+}
+
+func (p *CsvProcessor) ProcessResult(r *Result) {
+	fields := make([]string, 5)
+	if r.Error == nil {
+		fields[0] = "OK"
+	} else {
+		fields[0] = "FAIL"
+	}
+
+	fields[1] = p.currConfig.Name
+	fields[2] = r.Monitor.Name
+	fields[3] = r.Monitor.Url
+	fields[4] = r.Latency.String()
+
+	p.writer.Write(fields)
+	p.writer.Flush()
+}
+
+func (p *CsvProcessor) Finished() {
+	p.writer.Flush()
 }

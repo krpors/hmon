@@ -14,7 +14,7 @@ var (
 	flagConfdir      = flag.String("confdir", ".", "Directory with configurations of *_hmon.xml files.")
 	flagFiledir      = flag.String("filedir", ".", "Base directory to search for request files. If ommited, the current working directory is used.")
 	flagValidateOnly = flag.Bool("validate", false, "When specified, only validate the configuration file(s), but don't run the monitors.")
-	flagOutput       = flag.String("output", "default", "Output format ('default')")
+	flagOutput       = flag.String("output", "default", "Output format ('default', 'csv')")
 	flagVersion      = flag.Bool("version", false, "Prints out version number and exits (discards other flags)")
 	flagSequential   = flag.Bool("sequential", false, "When set, execute monitors in sequential order (not recommended for speed)")
 )
@@ -67,8 +67,9 @@ func main() {
 		fmt.Fprintf(os.Stderr, "hmon version %s\n\n", VERSION)
 		fmt.Fprintf(os.Stderr, "A simplistic host monitor using content assertions. This tool connects to\n")
 		fmt.Fprintf(os.Stderr, "configured http serving hosts, issues a request and checks the content using\n")
-		fmt.Fprintf(os.Stderr, "regular expression 'assertions'. For more information, check the GitHub page\n")
-		fmt.Fprintf(os.Stderr, "at http://github.com/krpors/hmon.\n\n")
+		fmt.Fprintf(os.Stderr, "regular expression 'assertions'.\n\n")
+		fmt.Fprintf(os.Stderr, "Output is done to the standard output for ease of redirection and the like.\n")
+		fmt.Fprintf(os.Stderr, "For more information, check the GitHub page at http://github.com/krpors/hmon.\n\n")
 		fmt.Fprintf(os.Stderr, "FLAGS:\n")
 		flag.PrintDefaults()
 	}
@@ -102,13 +103,13 @@ func main() {
 	// determine processor here
 	switch *flagOutput {
 	case "default":
-		processor = DefaultProcessor{}
+		processor = &DefaultProcessor{}
 	case "html":
-		processor = DefaultProcessor{}
+		processor = &DefaultProcessor{}
 	case "csv":
-		processor = DefaultProcessor{}
+		processor = &CsvProcessor{}
 	default:
-		processor = DefaultProcessor{}
+		processor = &DefaultProcessor{}
 	}
 
 	processor.Started()
