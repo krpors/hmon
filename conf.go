@@ -1,14 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // ValidationError, used to return when validation fails.
@@ -52,6 +55,72 @@ type Monitor struct {
 	Timeout     int      `xml:"timeout"`
 	Headers     []Header `xml:"headers>header"`
 	Assertions  []string `xml:"assertions>assertion"`
+}
+
+// timeout dialer, see https://groups.google.com/forum/?fromgroups=#!topic/golang-nuts/2ehqb6t54kA
+
+// Runs a check for the given Monitor. There are a few things done in this function.
+// If the given input file is empty (i.e. none), a http GET is issued to the given URL.
+// If a file is given though, this will become a http POST, with the post-data being the
+// file's contents. If there are any assertions configured, all the assertions are used
+// to test the content. If none are configured, it will just be a sort of 'ping-check',
+// i.e. checking if a connection could be made to the URL.
+func (m *Monitor) Run(baseDir string, c chan Result) {
+	client := http.Client{}
+
+	// when no file is specified, do a GET
+	var req *http.Request
+	var err error
+
+	if m.File == "" {
+		req, err = http.NewRequest("GET", m.Url, nil)
+	} else {
+		requestBody, err := ioutil.ReadFile(path.Join(baseDir, m.File))
+		if err != nil {
+			c <- Result{m, 0, err}
+			return
+		}
+		req, err = http.NewRequest("POST", m.Url, bytes.NewReader(requestBody))
+	}
+
+	if err != nil {
+		c <- Result{m, 0, err}
+		return
+	}
+
+	// add all optional headers:
+	for i := range m.Headers {
+		req.Header.Add(m.Headers[i].Name, m.Headers[i].Value)
+	}
+
+	// start measuring time from this point:
+	tstart := time.Now()
+
+	resp, err := client.Do(req)
+	if err != nil {
+		c <- Result{m, 0, err}
+		return
+	}
+	defer resp.Body.Close()
+
+	responseContents, err := ioutil.ReadAll(resp.Body)
+
+	// whether the response validates against the assertions.
+	// When no assertions are given, just check if the site/host is up.
+	for i := range m.Assertions {
+		// at this point, compilation of the regular expression must succeed,
+		// since we already executed a Validate() on the configuration itself.
+		// To make things sure, we do a MustCompile though.
+		rex := regexp.MustCompile(m.Assertions[i])
+		found := rex.Find(responseContents)
+		if found == nil {
+			c <- Result{m, time.Now().Sub(tstart), fmt.Errorf("assertion failed for regex `%s'", m.Assertions[i])}
+			return
+		}
+	}
+
+	// passed all tests, return true to the channel
+	c <- Result{m, time.Now().Sub(tstart), nil}
 }
 
 func (m Monitor) String() string {
@@ -154,4 +223,56 @@ func FindConfigs(baseDir string) ([]Config, error) {
 	}
 
 	return configurations, nil
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+// Type Result encapsulates information about a Monitor and its invocation result. 
+type Result struct {
+	Monitor *Monitor      // the monitor which may or may not have failed.
+	Latency time.Duration // The latency of the call i.e. how long did it take.
+	Error   error         // An error, describing the possible failure. If nil, it's ok.
+}
+
+// Returns the result as a string for some easy-peasy debuggin'.
+func (r Result) String() string {
+	if r.Error == nil {
+		return fmt.Sprintf("ok    %s (%v)", r.Monitor.Name, r.Latency)
+	}
+
+	if r.Latency > 0 {
+		return fmt.Sprintf("FAIL  %s: %s (%v)", r.Monitor.Name, r.Error, r.Latency)
+	}
+
+	return fmt.Sprintf("FAIL  %s: %s", r.Monitor.Name, r.Error)
+}
+
+// The ResultProcessor interface defines functions that processes Results to whatever.
+type ResultProcessor interface {
+	// Invoked when the monitors are run.
+	Started()
+	// Invoked to process a Config.
+	ProcessConfig(c *Config)
+	// Processes a Result.
+	ProcessResult(r *Result)
+	// Invoked when the monitors are finished.
+	Finished()
+}
+
+// Default processor (outputs default stuff to stdout).
+type DefaultProcessor struct {
+}
+
+func (p DefaultProcessor) Started() {
+}
+
+func (p DefaultProcessor) ProcessConfig(c *Config) {
+	fmt.Printf("Processing config `%s'\n", (*c).Name)
+}
+
+func (p DefaultProcessor) ProcessResult(r *Result) {
+	fmt.Printf("%s\n", *r)
+}
+
+func (p DefaultProcessor) Finished() {
 }

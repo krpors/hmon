@@ -1,15 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"os"
-	"path"
-	"regexp"
-	"time"
 )
 
 // the version string for hmon.
@@ -18,98 +12,12 @@ const VERSION string = "0.1"
 // cmdline flag variables
 var (
 	flagConfdir      = flag.String("confdir", ".", "Directory with configurations of *_hmon.xml files.")
-	flagReqdir       = flag.String("reqdir", ".", "Base directory to search for request files. If ommited, the current working directory is used.")
+	flagFiledir      = flag.String("filedir", ".", "Base directory to search for request files. If ommited, the current working directory is used.")
 	flagValidateOnly = flag.Bool("validate", false, "When specified, only validate the configuration file(s), but don't run the monitors.")
 	flagOutput       = flag.String("output", "default", "Output format ('default')")
 	flagVersion      = flag.Bool("version", false, "Prints out version number and exits (discards other flags)")
-	flagSequential   = flag.Bool("sequential", false, "When set, execute monitors in sequential order (not recommended)")
+	flagSequential   = flag.Bool("sequential", false, "When set, execute monitors in sequential order (not recommended for speed)")
 )
-
-// Type Result encapsulates information about a Monitor and its invocation result. 
-type Result struct {
-	Monitor *Monitor      // the monitor which may or may not have failed.
-	Latency time.Duration // The latency of the call i.e. how long did it take.
-	Error   error         // An error, describing the possible failure. If nil, it's ok.
-}
-
-// Returns the result as a string for some easy-peasy debuggin'.
-func (r Result) String() string {
-	if r.Error == nil {
-		return fmt.Sprintf("ok    %s (%v)", r.Monitor.Name, r.Latency)
-	}
-
-	if r.Latency > 0 {
-		return fmt.Sprintf("FAIL  %s: %s (%v)", r.Monitor.Name, r.Error, r.Latency)
-	}
-
-	return fmt.Sprintf("FAIL  %s: %s", r.Monitor.Name, r.Error)
-}
-
-// timeout dialer, see https://groups.google.com/forum/?fromgroups=#!topic/golang-nuts/2ehqb6t54kA
-
-// Runs a check for the given Monitor. There are a few things done in this function.
-// If the given input file is empty (i.e. none), a http GET is issued to the given URL.
-// If a file is given though, this will become a http POST, with the post-data being the
-// file's contents. If there are any assertions configured, all the assertions are used
-// to test the content. If none are configured, it will just be a sort of 'ping-check',
-// i.e. checking if a connection could be made to the URL.
-func runCheck(m *Monitor, baseDir string, c chan Result) {
-	client := http.Client{}
-
-	// when no file is specified, do a GET
-	var req *http.Request
-	var err error
-
-	if m.File == "" {
-		req, err = http.NewRequest("GET", m.Url, nil)
-	} else {
-		requestBody, err := ioutil.ReadFile(path.Join(baseDir, m.File))
-		if err != nil {
-			c <- Result{m, 0, err}
-			return
-		}
-		req, err = http.NewRequest("POST", m.Url, bytes.NewReader(requestBody))
-	}
-
-	if err != nil {
-		c <- Result{m, 0, err}
-		return
-	}
-
-	// add all optional headers:
-	for i := range m.Headers {
-		req.Header.Add(m.Headers[i].Name, m.Headers[i].Value)
-	}
-
-	// start measuring time from this point:
-	tstart := time.Now()
-
-	resp, err := client.Do(req)
-	if err != nil {
-		c <- Result{m, 0, err}
-		return
-	}
-	defer resp.Body.Close()
-
-	responseContents, err := ioutil.ReadAll(resp.Body)
-
-	// whether the response validates against the assertions.
-	// When no assertions are given, just check if the site/host is up.
-	for i := range m.Assertions {
-		// at this point, compilation of the regular expression must succeed,
-		// since we already executed a Validate() on the configuration itself.
-		// To make things sure, we do a MustCompile though.
-		rex := regexp.MustCompile(m.Assertions[i])
-		found := rex.Find(responseContents)
-		if found == nil {
-			c <- Result{m, time.Now().Sub(tstart), fmt.Errorf("assertion failed for regex `%s'", m.Assertions[i])}
-			return
-		}
-	}
-
-	// passed all tests, return true to the channel
-	c <- Result{m, time.Now().Sub(tstart), nil}
-}
 
 // Validates all configurations in the slice. For every failed validation,
 // print it out to stdout. If any failures occured, simply bail out.
@@ -181,26 +89,54 @@ func main() {
 
 	validateConfigurations(&configurations)
 
-	_, err = os.Open(*flagReqdir)
+	_, err = os.Open(*flagFiledir)
 	if err != nil {
 		fmt.Printf("Failed to open request directory. Nested error is: %s\n", err)
 		os.Exit(1)
 	}
 
+	results := make([]Result, 1)
+
+	// the result processor to use, depending in the flag "output"
+	var processor ResultProcessor
+	// determine processor here
+	switch *flagOutput {
+	case "default":
+		processor = DefaultProcessor{}
+	case "html":
+		processor = DefaultProcessor{}
+	case "csv":
+		processor = DefaultProcessor{}
+	default:
+		processor = DefaultProcessor{}
+	}
+
+	processor.Started()
 	for _, c := range configurations {
-		fmt.Println("Running monitors:", c.Name)
+		processor.ProcessConfig(&c)
 
 		// receiver channel
 		ch := make(chan Result, len(c.Monitors))
 
 		for i := range c.Monitors {
-			go runCheck(&c.Monitors[i], *flagReqdir, ch)
+			if *flagSequential {
+				c.Monitors[i].Run(*flagFiledir, ch)
+				result := <-ch
+				processor.ProcessResult(&result)
+			} else {
+				go c.Monitors[i].Run(*flagFiledir, ch)
+			}
 		}
 
 		// read from the channel until all monitors have sent their response
-		for _ = range c.Monitors {
-			fmt.Println(<-ch)
+		if !*flagSequential {
+			for _ = range c.Monitors {
+				result := <-ch
+				processor.ProcessResult(&result)
+			}
 		}
-
 	}
+	processor.Finished()
+
+	_ = results
 }
