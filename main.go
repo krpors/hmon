@@ -98,23 +98,23 @@ func main() {
 
 	results := make([]Result, 1)
 
-	// the result processor to use, depending in the flag "output"
-	var processor ResultProcessor
-	// determine processor here
+	// the result renderer to use, depending in the flag "output"
+	var renderer ResultRenderer
+	// determine renderer here
 	switch *flagOutput {
 	case "default":
-		processor = &DefaultProcessor{}
+		renderer= &DefaultRenderer{}
 	case "html":
-		processor = &DefaultProcessor{}
+		renderer= &DefaultRenderer{}
 	case "csv":
-		processor = &CsvProcessor{}
+		renderer= &CsvRenderer{}
 	default:
-		processor = &DefaultProcessor{}
+		renderer= &DefaultRenderer{}
 	}
 
-	processor.Started()
+	renderer.Started()
 	for _, c := range configurations {
-		processor.ProcessConfig(&c)
+		renderer.RenderConfig(&c)
 
 		// receiver channel
 		ch := make(chan Result, len(c.Monitors))
@@ -123,7 +123,7 @@ func main() {
 			if *flagSequential {
 				c.Monitors[i].Run(*flagFiledir, ch)
 				result := <-ch
-				processor.ProcessResult(&result)
+				renderer.RenderResult(&result)
 			} else {
 				go c.Monitors[i].Run(*flagFiledir, ch)
 			}
@@ -133,11 +133,11 @@ func main() {
 		if !*flagSequential {
 			for _ = range c.Monitors {
 				result := <-ch
-				processor.ProcessResult(&result)
+				renderer.RenderResult(&result)
 			}
 		}
 	}
-	processor.Finished()
+	renderer.Finished()
 
 	_ = results
 }

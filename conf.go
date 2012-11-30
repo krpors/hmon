@@ -251,32 +251,32 @@ func (r Result) String() string {
 	return fmt.Sprintf("FAIL  %s: %s", r.Monitor.Name, r.Error)
 }
 
-// The ResultProcessor interface defines functions that processes Results to whatever.
-type ResultProcessor interface {
+// The ResultRenderer interface defines functions that processes Results to whatever.
+type ResultRenderer interface {
 	// Invoked when the monitors are run.
 	Started()
 	// Invoked to process a Config.
-	ProcessConfig(c *Config)
-	// Processes a Result.
-	ProcessResult(r *Result)
+	RenderConfig(c *Config)
+	// Renders a Result.
+	RenderResult(r *Result)
 	// Invoked when the monitors are finished.
 	Finished()
 }
 
 // Default processor (outputs default stuff to stdout).
-type DefaultProcessor struct {
+type DefaultRenderer struct {
 	countOk   int16 // amount of OKs
 	countFail int16 // amount of failures
 }
 
-func (p *DefaultProcessor) Started() {
+func (p *DefaultRenderer) Started() {
 }
 
-func (p *DefaultProcessor) ProcessConfig(c *Config) {
+func (p *DefaultRenderer) RenderConfig(c *Config) {
 	fmt.Printf("Processing config `%s'\n", (*c).Name)
 }
 
-func (p *DefaultProcessor) ProcessResult(r *Result) {
+func (p *DefaultRenderer) RenderResult(r *Result) {
 	if r.Error == nil {
 		p.countOk++
 	} else {
@@ -285,26 +285,26 @@ func (p *DefaultProcessor) ProcessResult(r *Result) {
 	fmt.Printf("%s\n", *r)
 }
 
-func (p *DefaultProcessor) Finished() {
+func (p *DefaultRenderer) Finished() {
 	fmt.Printf("\nFinished with %d successes and %d errors.\n", p.countOk, p.countFail)
 }
 
 // Outputs Results to CSV format on stdout.
-type CsvProcessor struct {
+type CsvRenderer struct {
 	writer     *csv.Writer
 	currConfig *Config
 }
 
-func (p *CsvProcessor) Started() {
+func (p *CsvRenderer) Started() {
 	// initialize a new writer.
 	p.writer = csv.NewWriter(os.Stdout)
 }
 
-func (p *CsvProcessor) ProcessConfig(c *Config) {
+func (p *CsvRenderer) RenderConfig(c *Config) {
 	p.currConfig = c
 }
 
-func (p *CsvProcessor) ProcessResult(r *Result) {
+func (p *CsvRenderer) RenderResult(r *Result) {
 	fields := make([]string, 5)
 	if r.Error == nil {
 		fields[0] = "OK"
@@ -321,6 +321,6 @@ func (p *CsvProcessor) ProcessResult(r *Result) {
 	p.writer.Flush()
 }
 
-func (p *CsvProcessor) Finished() {
+func (p *CsvRenderer) Finished() {
 	p.writer.Flush()
 }
