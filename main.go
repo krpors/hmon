@@ -14,9 +14,10 @@ var (
 	flagConfdir      = flag.String("confdir", ".", "Directory with configurations of *_hmon.xml files.")
 	flagFiledir      = flag.String("filedir", ".", "Base directory to search for request files. If ommited, the current working directory is used.")
 	flagValidateOnly = flag.Bool("validate", false, "When specified, only validate the configuration file(s), but don't run the monitors.")
-	flagOutput       = flag.String("output", "default", "Output format ('default', 'csv')")
-	flagVersion      = flag.Bool("version", false, "Prints out version number and exits (discards other flags)")
-	flagSequential   = flag.Bool("sequential", false, "When set, execute monitors in sequential order (not recommended for speed)")
+	flagOutfile      = flag.String("outfile", "", "Output to given file. If empty, output will be done to stdout only.")
+	flagOuttype      = flag.String("outtype", "", "Output format ('csv', 'html', 'json'). Only suitable in combination with -outfile .")
+	flagVersion      = flag.Bool("version", false, "Prints out version number and exits (discards other flags).")
+	flagSequential   = flag.Bool("sequential", false, "When set, execute monitors in sequential order (not recommended for speed).")
 )
 
 // Validates all configurations in the slice. For every failed validation,
@@ -61,6 +62,14 @@ func validateConfigurations(configurations *[]Config) {
 	}
 }
 
+func printJson(r *[]Result) {
+	// TODO: print to json to file.
+}
+
+func printCsv(r *[]Result) {
+	// TODO: print to csv to file
+}
+
 func main() {
 	// cmdline usage function. Prints out to stderr of course.
 	flag.Usage = func() {
@@ -68,7 +77,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "A simplistic host monitor using content assertions. This tool connects to\n")
 		fmt.Fprintf(os.Stderr, "configured http serving hosts, issues a request and checks the content using\n")
 		fmt.Fprintf(os.Stderr, "regular expression 'assertions'.\n\n")
-		fmt.Fprintf(os.Stderr, "Output is done to the standard output for ease of redirection and the like.\n")
+		fmt.Fprintf(os.Stderr, "Normal output is done to the standard output, and using the flag -outfile\n")
+		fmt.Fprintf(os.Stderr, "combined with -outtype the results can be written to different file formats.\n\n")
 		fmt.Fprintf(os.Stderr, "For more information, check the GitHub page at http://github.com/krpors/hmon.\n\n")
 		fmt.Fprintf(os.Stderr, "FLAGS:\n")
 		flag.PrintDefaults()
@@ -80,6 +90,9 @@ func main() {
 		fmt.Fprintf(os.Stderr, "hmon version %s\n", VERSION)
 		os.Exit(0)
 	}
+
+	// TODO: check output type if given, validate it. If not a valid one, QUITZOR!
+
 
 	// First, find the configurations from the flagConfdir. Bail if anything fails.
 	configurations, err := FindConfigs(*flagConfdir)
@@ -98,24 +111,8 @@ func main() {
 
 	results := make([]Result, 1)
 
-	// the result renderer to use, depending in the flag "output"
-	var renderer ResultRenderer
-	// determine renderer here
-	switch *flagOutput {
-	case "default":
-		renderer= &DefaultRenderer{}
-	case "html":
-		renderer= &DefaultRenderer{}
-	case "csv":
-		renderer= &CsvRenderer{}
-	default:
-		renderer= &DefaultRenderer{}
-	}
-
-	renderer.Started()
 	for _, c := range configurations {
-		renderer.RenderConfig(&c)
-
+		fmt.Printf("Processing configuration `%s'\n", c.Name)
 		// receiver channel
 		ch := make(chan Result, len(c.Monitors))
 
@@ -123,7 +120,8 @@ func main() {
 			if *flagSequential {
 				c.Monitors[i].Run(*flagFiledir, ch)
 				result := <-ch
-				renderer.RenderResult(&result)
+				fmt.Printf("%s\n", result)
+				results = append(results, result)
 			} else {
 				go c.Monitors[i].Run(*flagFiledir, ch)
 			}
@@ -133,11 +131,23 @@ func main() {
 		if !*flagSequential {
 			for _ = range c.Monitors {
 				result := <-ch
-				renderer.RenderResult(&result)
+				fmt.Printf("%s\n", result)
+				results = append(results, result)
 			}
 		}
 	}
-	renderer.Finished()
 
-	_ = results
+	var countOk int = 0
+	var countFail int = 0
+	for _, r := range results {
+		if r.Error == nil {
+			countOk++
+		} else {
+			countFail++
+		}
+	}
+
+	fmt.Printf("\nExecuted %d monitors with %d successes and %d failures.\n", len(results), countOk, countFail)
+
+	// TODO: check output file and type, write it to file using the printXxxx functions.
 }

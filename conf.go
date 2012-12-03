@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/csv"
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
@@ -202,7 +201,7 @@ func FindConfigs(baseDir string) ([]Config, error) {
 	for _, fi := range finfos {
 		// only fetch files
 		if !fi.IsDir() {
-			if strings.HasSuffix(fi.Name(), "hmon.xml") {
+			if strings.HasSuffix(fi.Name(), "_hmon.xml") {
 				fullFile := path.Join(baseDir, fi.Name())
 				contents, err := ioutil.ReadFile(fullFile)
 				if err != nil {
@@ -249,78 +248,4 @@ func (r Result) String() string {
 	}
 
 	return fmt.Sprintf("FAIL  %s: %s", r.Monitor.Name, r.Error)
-}
-
-// The ResultRenderer interface defines functions that processes Results to whatever.
-type ResultRenderer interface {
-	// Invoked when the monitors are run.
-	Started()
-	// Invoked to process a Config.
-	RenderConfig(c *Config)
-	// Renders a Result.
-	RenderResult(r *Result)
-	// Invoked when the monitors are finished.
-	Finished()
-}
-
-// Default processor (outputs default stuff to stdout).
-type DefaultRenderer struct {
-	countOk   int16 // amount of OKs
-	countFail int16 // amount of failures
-}
-
-func (p *DefaultRenderer) Started() {
-}
-
-func (p *DefaultRenderer) RenderConfig(c *Config) {
-	fmt.Printf("Processing config `%s'\n", (*c).Name)
-}
-
-func (p *DefaultRenderer) RenderResult(r *Result) {
-	if r.Error == nil {
-		p.countOk++
-	} else {
-		p.countFail++
-	}
-	fmt.Printf("%s\n", *r)
-}
-
-func (p *DefaultRenderer) Finished() {
-	fmt.Printf("\nFinished with %d successes and %d errors.\n", p.countOk, p.countFail)
-}
-
-// Outputs Results to CSV format on stdout.
-type CsvRenderer struct {
-	writer     *csv.Writer
-	currConfig *Config
-}
-
-func (p *CsvRenderer) Started() {
-	// initialize a new writer.
-	p.writer = csv.NewWriter(os.Stdout)
-}
-
-func (p *CsvRenderer) RenderConfig(c *Config) {
-	p.currConfig = c
-}
-
-func (p *CsvRenderer) RenderResult(r *Result) {
-	fields := make([]string, 5)
-	if r.Error == nil {
-		fields[0] = "OK"
-	} else {
-		fields[0] = "FAIL"
-	}
-
-	fields[1] = p.currConfig.Name
-	fields[2] = r.Monitor.Name
-	fields[3] = r.Monitor.Url
-	fields[4] = r.Latency.String()
-
-	p.writer.Write(fields)
-	p.writer.Flush()
-}
-
-func (p *CsvRenderer) Finished() {
-	p.writer.Flush()
 }
