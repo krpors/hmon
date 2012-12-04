@@ -1,9 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"strings"
 )
 
 // the version string for hmon.
@@ -15,7 +18,7 @@ var (
 	flagFiledir      = flag.String("filedir", ".", "Base directory to search for request files. If ommited, the current working directory is used.")
 	flagValidateOnly = flag.Bool("validate", false, "When specified, only validate the configuration file(s), but don't run the monitors.")
 	flagOutfile      = flag.String("outfile", "", "Output to given file. If empty, output will be done to stdout only.")
-	flagOuttype      = flag.String("outtype", "", "Output format ('csv', 'html', 'json'). Only suitable in combination with -outfile .")
+	flagFormat       = flag.String("format", "", "Output format ('csv', 'html', 'json'). Only suitable in combination with -outfile .")
 	flagVersion      = flag.Bool("version", false, "Prints out version number and exits (discards other flags).")
 	flagSequential   = flag.Bool("sequential", false, "When set, execute monitors in sequential order (not recommended for speed).")
 )
@@ -62,12 +65,29 @@ func validateConfigurations(configurations *[]Config) {
 	}
 }
 
-func printJson(r *[]Result) {
-	// TODO: print to json to file.
+func writeDefault(filename string, r *[]Result) {
+	fmt.Println("Writing default")
 }
 
-func printCsv(r *[]Result) {
+func writeJson(filename string, r *[]Result) {
+	// TODO: print to json to file.
+	b, err := json.MarshalIndent(r, "\t", "\t")
+	if err != nil {
+		fmt.Printf("Error marshaling json: %s", err)
+		os.Exit(1)
+		return // shouldn't occur
+	}
+
+	err = ioutil.WriteFile(filename, b, 644)
+	if err != nil {
+		fmt.Printf("Unable to write to file `%s': %s\n", filename, err)
+		os.Exit(1)
+	}
+}
+
+func writeCsv(filename string, r *[]Result) {
 	// TODO: print to csv to file
+	fmt.Println("writing csv")
 }
 
 func main() {
@@ -91,8 +111,23 @@ func main() {
 		os.Exit(0)
 	}
 
-	// TODO: check output type if given, validate it. If not a valid one, QUITZOR!
-
+	var writeFunc func(string, *[]Result)
+	// determine type of format
+	switch *flagFormat {
+	case "":
+		writeFunc = writeDefault
+		break
+	case "json":
+		writeFunc = writeJson
+		break
+	case "csv":
+		writeFunc = writeCsv
+		break
+	default:
+		// unknown output format. Bail out
+		fmt.Printf("Unknown output format: %s\n", *flagFormat)
+		os.Exit(1)
+	}
 
 	// First, find the configurations from the flagConfdir. Bail if anything fails.
 	configurations, err := FindConfigs(*flagConfdir)
@@ -109,10 +144,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	results := make([]Result, 1)
+	results := make([]Result, 0)
 
 	for _, c := range configurations {
-		fmt.Printf("Processing configuration `%s'\n", c.Name)
+		fmt.Printf("Processing configuration `%s' with %d monitors\n", c.Name, len(c.Monitors))
+
 		// receiver channel
 		ch := make(chan Result, len(c.Monitors))
 
@@ -150,4 +186,10 @@ func main() {
 	fmt.Printf("\nExecuted %d monitors with %d successes and %d failures.\n", len(results), countOk, countFail)
 
 	// TODO: check output file and type, write it to file using the printXxxx functions.
+	if strings.TrimSpace(*flagOutfile) != "" {
+		// sanity nil check.
+		if writeFunc != nil {
+			writeFunc(*flagOutfile, &results)
+		}
+	}
 }
