@@ -19,25 +19,25 @@ already have some kind of monitoring, but our (4) non-production servers do not.
 
 Per `./hmon -help`:
 
-hmon version 0.1
+    hmon version 0.1
 
-A simplistic host monitor using content assertions. This tool connects to
-configured http serving hosts, issues a request and checks the content using
-regular expression 'assertions'.
+    A simplistic host monitor using content assertions. This tool connects to
+    configured http serving hosts, issues a request and checks the content using
+    regular expression 'assertions'.
 
-Normal output is done to the standard output, and using the flag -outfile
-combined with -outtype the results can be written to different file formats.
+    Normal output is done to the standard output, and using the flag -outfile
+    combined with -outtype the results can be written to different file formats.
 
-For more information, check the GitHub page at http://github.com/krpors/hmon.
+    For more information, check the GitHub page at http://github.com/krpors/hmon.
 
-FLAGS:
--confdir=".": Directory with configurations of \*\_hmon.xml files.
--filedir=".": Base directory to search for request files. If ommited, the current working directory is used.
--format="": Output format ('csv', 'html', 'json'). Only suitable in combination with -outfile .
--outfile="": Output to given file. If empty, output will be done to stdout only.
--sequential=false: When set, execute monitors in sequential order (not recommended for speed).
--validate=false: When specified, only validate the configuration file(s), but don't run the monitors.
--version=false: Prints out version number and exits (discards other flags).
+    FLAGS:
+    -confdir=".": Directory with configurations of \*\_hmon.xml files.
+    -filedir=".": Base directory to search for request files. If ommited, the current working directory is used.
+    -format="": Output format ('csv', 'html', 'json'). Only suitable in combination with -outfile .
+    -outfile="": Output to given file. If empty, output will be done to stdout only.
+    -sequential=false: When set, execute monitors in sequential order (not recommended for speed).
+    -validate=false: When specified, only validate the configuration file(s), but don't run the monitors.
+    -version=false: Prints out version number and exits (discards other flags).
 
 # Example configuration
 
