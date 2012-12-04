@@ -117,15 +117,18 @@ func (m *Monitor) Run(baseDir string, c chan Result) {
 		rex := regexp.MustCompile(m.Assertions[i])
 		found := rex.Find(responseContents)
 		if found == nil {
-			c <- Result{m, time.Now().Sub(tstart), fmt.Errorf("assertion failed for regex `%s'", m.Assertions[i])}
+			millis := int64(time.Now().Sub(tstart) / time.Millisecond)
+			c <- Result{m, millis, fmt.Errorf("assertion failed for regex `%s'", m.Assertions[i])}
 			return
 		}
 	}
 
 	// passed all tests, return true to the channel
-	c <- Result{m, time.Now().Sub(tstart), nil}
+	millis := int64(time.Now().Sub(tstart) / time.Millisecond)
+	c <- Result{m, millis, nil}
 }
 
+// Returns the monitor as a string.
 func (m Monitor) String() string {
 	return fmt.Sprintf("%s (%s), %d headers, %d assertions", m.Name, m.Url, len(m.Headers), len(m.Assertions))
 }
@@ -232,19 +235,19 @@ func FindConfigs(baseDir string) ([]Config, error) {
 
 // Type Result encapsulates information about a Monitor and its invocation result. 
 type Result struct {
-	Monitor *Monitor      // the monitor which may or may not have failed.
-	Latency time.Duration // The latency of the call i.e. how long did it take.
-	Error   error         // An error, describing the possible failure. If nil, it's ok.
+	Monitor *Monitor // the monitor which may or may not have failed.
+	Latency int64    // The latency of the call i.e. how long did it take (in ms)
+	Error   error    // An error, describing the possible failure. If nil, it's ok.
 }
 
 // Returns the result as a string for some easy-peasy debuggin'.
 func (r Result) String() string {
 	if r.Error == nil {
-		return fmt.Sprintf("ok    %s (%v)", r.Monitor.Name, r.Latency)
+		return fmt.Sprintf("ok    %s (%d ms)", r.Monitor.Name, r.Latency)
 	}
 
 	if r.Latency > 0 {
-		return fmt.Sprintf("FAIL  %s: %s (%v)", r.Monitor.Name, r.Error, r.Latency)
+		return fmt.Sprintf("FAIL  %s: %s (%d ms)", r.Monitor.Name, r.Error, r.Latency)
 	}
 
 	return fmt.Sprintf("FAIL  %s: %s", r.Monitor.Name, r.Error)

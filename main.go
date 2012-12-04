@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -24,7 +26,7 @@ var (
 )
 
 // Validates all configurations in the slice. For every failed validation,
-// print it out to stdout. If any failures occured, simply bail out.
+// print it out to stdout. If any failures occured, simply bail out with exitcode 1.
 func validateConfigurations(configurations *[]Config) {
 	if len(*configurations) == 0 {
 		fmt.Printf("No configurations found were found in `%s'\n", *flagConfdir)
@@ -65,12 +67,14 @@ func validateConfigurations(configurations *[]Config) {
 	}
 }
 
+// Writes a non-specialized format to the given filename.
 func writeDefault(filename string, r *[]Result) {
 	fmt.Println("Writing default")
 }
 
+// Writes the slice of results to the given filename as Json.
+// Any error will exit the program with exitcode 1.
 func writeJson(filename string, r *[]Result) {
-	// TODO: print to json to file.
 	b, err := json.MarshalIndent(r, "\t", "\t")
 	if err != nil {
 		fmt.Printf("Error marshaling json: %s", err)
@@ -85,11 +89,35 @@ func writeJson(filename string, r *[]Result) {
 	}
 }
 
+// Writes the slice of results to the given filename as CSV. If any error
+// occurs, exit with code 1.
 func writeCsv(filename string, r *[]Result) {
-	// TODO: print to csv to file
-	fmt.Println("writing csv")
+	f, err := os.Create(filename)
+	if err != nil {
+		fmt.Printf("Unable to open file for writing `%s': %s\n", filename, err)
+		os.Exit(1)
+	}
+
+	w := csv.NewWriter(f)
+
+	for _, e := range *r {
+		var status string = "FAIL"
+		if e.Error == nil {
+			status = "OK"
+		}
+
+		record := []string{
+			status,
+			e.Monitor.Name,
+			e.Monitor.Url,
+			strconv.FormatInt(e.Latency, 10),
+		}
+		w.Write(record)
+	}
+	w.Flush()
 }
 
+// Entry point of this program.
 func main() {
 	// cmdline usage function. Prints out to stderr of course.
 	flag.Usage = func() {
