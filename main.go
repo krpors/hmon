@@ -23,6 +23,7 @@ var (
 	flagFormat       = flag.String("format", "", "Output format ('csv', 'html', 'json'). Only suitable in combination with -outfile .")
 	flagVersion      = flag.Bool("version", false, "Prints out version number and exits (discards other flags).")
 	flagSequential   = flag.Bool("sequential", false, "When set, execute monitors in sequential order (not recommended for speed).")
+	flagCombine      = flag.Bool("combine", false, "If set, combine all monitors from all configurations to run, instead of per configuration.")
 )
 
 // Validates all configurations in the slice. For every failed validation,
@@ -52,6 +53,7 @@ func validateConfigurations(configurations *[]Config) {
 
 			success = false
 		}
+
 	}
 
 	if !success {
@@ -69,6 +71,7 @@ func validateConfigurations(configurations *[]Config) {
 
 // Writes a non-specialized format to the given filename.
 func writeDefault(filename string, r *[]Result) {
+	// TODO this
 	fmt.Println("Writing default")
 }
 
@@ -115,6 +118,46 @@ func writeCsv(filename string, r *[]Result) {
 		w.Write(record)
 	}
 	w.Flush()
+}
+
+// Run the given monitors in sequential order, and return the results.
+func runSequential(filedir string, m []Monitor) []Result {
+	// receiver channel
+	ch := make(chan Result)
+
+	results := make([]Result, 0)
+
+	for i := range m {
+		go m[i].Run(filedir, ch)
+		// immediately receive from the channel
+		result := <-ch
+		results = append(results, result)
+		fmt.Printf("%s\n", result)
+	}
+
+	return results
+}
+
+// Run the given monitors in parallel order, and return the results.
+func runParallel(filedir string, m []Monitor) []Result {
+	// receiver channel
+	ch := make(chan Result, len(m))
+
+	results := make([]Result, 0)
+
+	for i := range m {
+		// fire all goroutines first
+		go m[i].Run(filedir, ch)
+	}
+
+	// then receive from the channel
+	for _ = range m {
+		result := <-ch
+		results = append(results, result)
+		fmt.Printf("%s\n", result)
+	}
+
+	return results
 }
 
 // Entry point of this program.
@@ -174,31 +217,40 @@ func main() {
 
 	results := make([]Result, 0)
 
-	for _, c := range configurations {
-		fmt.Printf("Processing configuration `%s' with %d monitors\n", c.Name, len(c.Monitors))
+	// Are we supposed to run the monitors per configuration?
+	if !*flagCombine {
+		for _, c := range configurations {
+			fmt.Printf("Processing configuration `%s' with %d monitors\n", c.Name, len(c.Monitors))
 
-		// receiver channel
-		ch := make(chan Result, len(c.Monitors))
-
-		for i := range c.Monitors {
-			if *flagSequential {
-				c.Monitors[i].Run(*flagFiledir, ch)
-				result := <-ch
-				fmt.Printf("%s\n", result)
-				results = append(results, result)
+			// should we run in parallel?
+			if !*flagSequential {
+				presults := runParallel(*flagFiledir, c.Monitors)
+				results = append(results, presults...)
 			} else {
-				go c.Monitors[i].Run(*flagFiledir, ch)
+				// or sequential.
+				sresults := runSequential(*flagFiledir, c.Monitors)
+				results = append(results, sresults...)
 			}
+		}
+	} else {
+		// or are we combining them all in one large slice of Monitors first?
+		allMonitors := make([]Monitor, 0)
+		for _, c := range configurations {
+			allMonitors = append(allMonitors, c.Monitors...)
 		}
 
-		// read from the channel until all monitors have sent their response
+		fmt.Printf("Running %d monitors from %d configurations combined.\n", len(allMonitors), len(configurations))
+
+		// should we run in parallel?
 		if !*flagSequential {
-			for _ = range c.Monitors {
-				result := <-ch
-				fmt.Printf("%s\n", result)
-				results = append(results, result)
-			}
+			presults := runParallel(*flagFiledir, allMonitors)
+			results = append(results, presults...)
+		} else {
+			// or sequential.
+			sresults := runSequential(*flagFiledir, allMonitors)
+			results = append(results, sresults...)
 		}
+
 	}
 
 	var countOk int = 0
