@@ -12,7 +12,7 @@ import (
 )
 
 // the version string for hmon.
-const VERSION string = "0.1"
+const VERSION string = "1.0.0"
 
 // cmdline flag variables
 var (
@@ -20,7 +20,7 @@ var (
 	flagFiledir      = flag.String("filedir", ".", "Base directory to search for request files. If ommited, the current working directory is used.")
 	flagValidateOnly = flag.Bool("validate", false, "When specified, only validate the configuration file(s), but don't run the monitors.")
 	flagOutfile      = flag.String("outfile", "", "Output to given file. If empty, output will be done to stdout only.")
-	flagFormat       = flag.String("format", "", "Output format ('csv', 'html', 'json'). Only suitable in combination with -outfile .")
+	flagFormat       = flag.String("format", "", "Output format ('csv', 'json'). Only suitable in combination with -outfile .")
 	flagVersion      = flag.Bool("version", false, "Prints out version number and exits (discards other flags).")
 	flagSequential   = flag.Bool("sequential", false, "When set, execute monitors in sequential order (not recommended for speed).")
 	flagCombine      = flag.Bool("combine", false, "If set, combine all monitors from all configurations to run, instead of per configuration.")

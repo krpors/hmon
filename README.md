@@ -19,7 +19,7 @@ already have some kind of monitoring, but our (4) non-production servers do not.
 
 Per `./hmon -help`:
 
-    hmon version 0.1
+    hmon version 1.0.0
 
     A simplistic host monitor using content assertions. This tool connects to
     configured http serving hosts, issues a request and checks the content using
@@ -31,13 +31,15 @@ Per `./hmon -help`:
     For more information, check the GitHub page at http://github.com/krpors/hmon.
 
     FLAGS:
-    -confdir=".": Directory with configurations of \*\_hmon.xml files.
-    -filedir=".": Base directory to search for request files. If ommited, the current working directory is used.
-    -format="": Output format ('csv', 'html', 'json'). Only suitable in combination with -outfile .
-    -outfile="": Output to given file. If empty, output will be done to stdout only.
-    -sequential=false: When set, execute monitors in sequential order (not recommended for speed).
-    -validate=false: When specified, only validate the configuration file(s), but don't run the monitors.
-    -version=false: Prints out version number and exits (discards other flags).
+      -combine=false: If set, combine all monitors from all configurations to run, instead of per configuration.
+      -confdir=".": Directory with configurations of \*\_hmon.xml files.
+      -filedir=".": Base directory to search for request files. If ommited, the current working directory is used.
+      -format="": Output format ('csv', 'json'). Only suitable in combination with -outfile .
+      -outfile="": Output to given file. If empty, output will be done to stdout only.
+      -sequential=false: When set, execute monitors in sequential order (not recommended for speed).
+      -validate=false: When specified, only validate the configuration file(s), but don't run the monitors.
+      -version=false: Prints out version number and exits (discards other flags).
+
 
 # Example configuration
 
@@ -91,3 +93,10 @@ Given that this configuration is saved in `config_hmon.xml`:
     ok    Github.com (515.4369ms)
 
     Executed 1 monitors with 1 successes and 0 failures
+
+# Output
+
+Using the flags `-outfile` and `-format` you can currently choose to output the results
+to a file with formats CSV and JSON. That way, the tool can be scheduled using a crontab
+or the like. The output could be written in JSON format to a file, and a webserver could
+read this JSON file and render it.
