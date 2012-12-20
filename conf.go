@@ -14,6 +14,9 @@ import (
 	"time"
 )
 
+// Default timeout in seconds
+const TIMEOUT_DEFAULT int = 10
+
 // ValidationError, used to return when validation fails.
 type ValidationError struct {
 	// Just an error list with all validation errors.
@@ -99,14 +102,48 @@ func (m *Monitor) Run(baseDir string, c chan Result) {
 	// start measuring time from this point:
 	tstart := time.Now()
 
-	resp, err := client.Do(req)
-	if err != nil {
-		c <- Result{m, 0, err}
+	// This block enables us to timeout the HTTP call.
+	type response struct {
+		Resp *http.Response
+		Err  error
+	}
+	timeoutChan := make(chan response)
+
+	// run the Do in a goroutine, and write the response to the timeout channel.
+	go func() {
+		resp, err := client.Do(req)
+		timeoutChan <- response{resp, err}
+	}()
+
+	var theResponse response
+
+	// read from the channel, or until timeout
+	var timeout time.Duration
+	if m.Timeout <= 0 {
+		// if timeout is smaller/eq zero, use default timeout
+		timeout = time.Duration(TIMEOUT_DEFAULT) * time.Second
+	} else {
+		timeout = time.Duration(int64(m.Timeout)) * time.Millisecond
+	}
+
+	select {
+	case <-time.After(timeout):
+		c <- Result{m, 0, fmt.Errorf("timeout after %d ms", timeout/time.Millisecond)}
+		return
+	case theResponse = <-timeoutChan:
+		// OKAY! We got a response.
+	}
+
+	// check any errors in the response itself
+	if theResponse.Err != nil {
+		c <- Result{m, 0, theResponse.Err}
 		return
 	}
-	defer resp.Body.Close()
 
-	responseContents, err := ioutil.ReadAll(resp.Body)
+	// we got no errors now, i.e. we got an actual response body. Defer closing it,
+	// and read from it so we can process it further.
+	defer theResponse.Resp.Body.Close()
+	responseContents, err := ioutil.ReadAll(theResponse.Resp.Body)
 
 	// whether the response validates against the assertions.
 	// When no assertions are given, just check if the site/host is up.
