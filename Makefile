@@ -3,3 +3,6 @@ all:
 
 fmt:
 	go fmt github.com/krpors/hmon
+
+test:
+	go test github.com/krpors/hmon
