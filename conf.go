@@ -217,6 +217,34 @@ func (c *Config) Validate() error {
 	return nil
 }
 
+// Reads a single configuration file name. Returns a Config struct if OK,
+// or an error if anything has failed.
+func ReadConfig(file string) (Config, error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return Config{}, err
+	}
+
+	finfo, err := f.Stat()
+
+	if finfo.IsDir() {
+		return Config{}, fmt.Errorf("`%s' is not a regular file", file)
+	}
+
+	contents, err := ioutil.ReadFile(file)
+	if err != nil {
+	}
+
+	c := Config{}
+	c.FileName = finfo.Name()
+	err = xml.Unmarshal(contents, &c)
+	if err != nil {
+		return Config{}, fmt.Errorf("failed to parse file `%s': %s", file, err)
+	}
+
+	return c, nil
+}
+
 // Using a base directory, finds all configuration XML files and parses them.
 // A slice of Configs are returned. Obviously, if the slice length is zero,
 // and the error is non-nil, no configurations are found.

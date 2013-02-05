@@ -16,6 +16,7 @@ const VERSION string = "1.0.1"
 
 // cmdline flag variables
 var (
+	flagConf         = flag.String("conf", "", "Single configuration file. This param takes precedence over -confdir.")
 	flagConfdir      = flag.String("confdir", ".", "Directory with configurations of *_hmon.xml files.")
 	flagFiledir      = flag.String("filedir", ".", "Base directory to search for request files. If ommited, the current working directory is used.")
 	flagValidateOnly = flag.Bool("validate", false, "When specified, only validate the configuration file(s), but don't run the monitors.")
@@ -200,11 +201,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	// First, find the configurations from the flagConfdir. Bail if anything fails.
-	configurations, err := FindConfigs(*flagConfdir)
-	if err != nil {
-		fmt.Printf("Unable to find/parse configuration files. Nested error is: %s\n", err)
-		os.Exit(1)
+	var configurations []Config
+	var err error
+
+	// Check if we should read a single configuration, or a configuration directory.
+	if *flagConf != "" {
+		c, err := ReadConfig(*flagConf)
+		if err != nil {
+			fmt.Printf("Unable to parse single configuration file `%s': %s\n", *flagConf, err)
+			os.Exit(1)
+		}
+		// just append the parsed config to the slice. It should now be 1 in length, only.
+		configurations = append(configurations, c)
+	} else {
+		// First, find the configurations from the flagConfdir. Bail if anything fails.
+		configurations, err = FindConfigs(*flagConfdir)
+		if err != nil {
+			fmt.Printf("Unable to find/parse configuration files. Nested error is: %s\n", err)
+			os.Exit(1)
+		}
 	}
 
 	validateConfigurations(&configurations)

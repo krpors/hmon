@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/xml"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -175,5 +176,42 @@ func TestFindConfigs(t *testing.T) {
 		if err != nil {
 			t.Errorf("validation failed for configuration")
 		}
+	}
+}
+
+// Test the singular reading of a config file.
+func TestReadConfig(t *testing.T) {
+	// write some temp configs in /tmp/. Then run FindConfigs
+	// there to parse them?
+	var goodXml = `<?xml version="1.0" encoding="UTF-8"?>
+<hmonconfig name="MiMaMeh">
+    <monitor name="first" desc="desc 1">
+        <url>http://www.iana.org/domains/example/</url>
+        <file>./env/request1.xml</file>
+        <timeout>60</timeout>
+        <headers>
+            <header name="SOAPAction" value="whatevs"/>
+        </headers>
+        <assertions>
+            <assertion>Example Domains</assertion>
+        </assertions>
+    </monitor>
+</hmonconfig>
+`
+	file1 := path.Join(os.TempDir(), "groupone_hmon.xml")
+	err := ioutil.WriteFile(file1, []byte(goodXml), 0644)
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.Remove(file1)
+
+	c, err := ReadConfig(file1)
+	if err != nil {
+		t.Errorf("unable to read config file %s: %s", file1, err)
+	}
+
+	fmt.Println(c)
+	if c.Name != "MiMaMeh" {
+		t.Errorf("configuration name did not match")
 	}
 }
