@@ -278,7 +278,10 @@ func main() {
 		}
 	}
 
-	fmt.Printf("\nExecuted %d monitors with %d successes and %d failures.\n", len(results), countOk, countFail)
+	fmt.Printf("\nExecution summary:\n")
+	fmt.Printf("Monitors:  %d\n", len(results))
+	fmt.Printf("Successes: %d\n", countOk)
+	fmt.Printf("Failures:  %d\n", countFail)
 
 	// TODO: check output file and type, write it to file using the printXxxx functions.
 	if strings.TrimSpace(*flagOutfile) != "" {
