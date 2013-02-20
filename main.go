@@ -9,7 +9,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 )
 
 // the version string for hmon.
@@ -147,15 +146,8 @@ func runParallel(filedir string, m []Monitor) []Result {
 
 	results := make([]Result, 0)
 
-	// TODO: use sync.WaitGroup here. 
-	var wg sync.WaitGroup
 	for i := range m {
 		// fire all goroutines first
-		wg.Add(1)
-		go func() {
-			m[i].Run(filedir, ch)
-			wg.Done()
-		}()
 		go m[i].Run(filedir, ch)
 	}
 
@@ -286,10 +278,7 @@ func main() {
 		}
 	}
 
-	fmt.Printf("\nExecution summary:\n")
-	fmt.Printf("Monitors:  %d\n", len(results))
-	fmt.Printf("Successes: %d\n", countOk)
-	fmt.Printf("Failures:  %d\n", countFail)
+	fmt.Printf("\nExecuted %d monitors with %d successes and %d failures.\n", len(results), countOk, countFail)
 
 	// TODO: check output file and type, write it to file using the printXxxx functions.
 	if strings.TrimSpace(*flagOutfile) != "" {
