@@ -15,7 +15,7 @@ import (
 )
 
 // Default timeout in seconds
-const TIMEOUT_DEFAULT int = 10
+const TIMEOUT_DEFAULT int = 60
 
 // ValidationError, used to return when validation fails.
 type ValidationError struct {
@@ -35,6 +35,26 @@ func (e ValidationError) Error() string {
 		plural = "errors"
 	}
 	return fmt.Sprintf("%d config validation %s found", len(e.ErrorList), plural)
+}
+
+// This type implements the error and json.Marshaler interface. It's a sort of wrapper
+// around the error type, so an error can be marshaled to JSON (i.e. the error description).
+type ResultError struct {
+	Err error // the encapsulated error
+}
+
+// Returns the description of the error.
+func (r ResultError) Error() string {
+	return fmt.Sprintf("%v", r.Err)
+}
+
+// The function from interface json.Marshaler. Empty descriptions result in a null JSON object.
+// Non empty descriptions are just simply marshaled.
+func (r ResultError) MarshalJSON() ([]byte, error) {
+	if r.Err == nil {
+		return []byte("null"), nil
+	}
+	return []byte(fmt.Sprintf("\"%s\"", r.Err)), nil
 }
 
 // Root configuration node, contains zero or more Monitor
@@ -60,6 +80,12 @@ type Monitor struct {
 	Assertions  []string `xml:"assertions>assertion"`
 }
 
+// Extra HTTP headers to send.
+type Header struct {
+	Name  string `xml:"name,attr"`
+	Value string `xml:"value,attr"`
+}
+
 // timeout dialer, see https://groups.google.com/forum/?fromgroups=#!topic/golang-nuts/2ehqb6t54kA
 
 // Runs a check for the given Monitor. There are a few things done in this function.
@@ -83,14 +109,14 @@ func (m *Monitor) Run(baseDir string, c chan Result) {
 	} else {
 		requestBody, err := ioutil.ReadFile(path.Join(baseDir, m.File))
 		if err != nil {
-			c <- Result{m, 0, err}
+			c <- Result{m, 0, ResultError{err}}
 			return
 		}
 		req, err = http.NewRequest("POST", m.Url, bytes.NewReader(requestBody))
 	}
 
 	if err != nil {
-		c <- Result{m, 0, err}
+		c <- Result{m, 0, ResultError{err}}
 		return
 	}
 
@@ -128,7 +154,7 @@ func (m *Monitor) Run(baseDir string, c chan Result) {
 
 	select {
 	case <-time.After(timeout):
-		c <- Result{m, 0, fmt.Errorf("timeout after %d ms", timeout/time.Millisecond)}
+		c <- Result{m, 0, ResultError{fmt.Errorf("timeout after %d ms", timeout/time.Millisecond)}}
 		return
 	case theResponse = <-timeoutChan:
 		// OKAY! We got a response.
@@ -136,7 +162,7 @@ func (m *Monitor) Run(baseDir string, c chan Result) {
 
 	// check any errors in the response itself
 	if theResponse.Err != nil {
-		c <- Result{m, 0, theResponse.Err}
+		c <- Result{m, 0, ResultError{theResponse.Err}}
 		return
 	}
 
@@ -155,7 +181,7 @@ func (m *Monitor) Run(baseDir string, c chan Result) {
 		found := rex.Find(responseContents)
 		if found == nil {
 			millis := int64(time.Now().Sub(tstart) / time.Millisecond)
-			c <- Result{m, millis, fmt.Errorf("assertion failed for regex `%s'", m.Assertions[i])}
+			c <- Result{m, millis, ResultError{fmt.Errorf("assertion failed for regex `%s'", m.Assertions[i])}}
 			return
 		}
 	}
@@ -168,12 +194,6 @@ func (m *Monitor) Run(baseDir string, c chan Result) {
 // Returns the monitor as a string.
 func (m Monitor) String() string {
 	return fmt.Sprintf("%s (%s), %d headers, %d assertions", m.Name, m.Url, len(m.Headers), len(m.Assertions))
-}
-
-// Extra HTTP headers to send.
-type Header struct {
-	Name  string `xml:"name,attr"`
-	Value string `xml:"value,attr"`
 }
 
 // Runs a validation over the parsed configuration file. The returned
