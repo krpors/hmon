@@ -12,7 +12,7 @@ import (
 )
 
 // the version string for hmon.
-const VERSION string = "1.0.1"
+const VERSION string = "1.0.2"
 
 // cmdline flag variables
 var (
@@ -85,7 +85,7 @@ func writeJson(filename string, r *[]Result) error {
 		return fmt.Errorf("Error marshaling json: %s", err)
 	}
 
-	err = ioutil.WriteFile(filename, b, 644)
+	err = ioutil.WriteFile(filename, b, 0644)
 	if err != nil {
 		return fmt.Errorf("Unable to write to file `%s': %s\n", filename, err)
 	}
@@ -97,6 +97,7 @@ func writeJson(filename string, r *[]Result) error {
 // occurs, exit with code 1.
 func writeCsv(filename string, r *[]Result) error {
 	f, err := os.Create(filename)
+
 	if err != nil {
 		return fmt.Errorf("Unable to open file for writing `%s': %s\n", filename, err)
 	}
@@ -178,8 +179,6 @@ func main() {
 	}
 
 	flag.Parse()
-
-	fmt.Println(*flagVersion)
 
 	// If version is requested, report that and then exit normally.
 	if *flagVersion {
