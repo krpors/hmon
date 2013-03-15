@@ -71,35 +71,34 @@ func validateConfigurations(configurations *[]Config) {
 }
 
 // Writes a non-specialized format to the given filename.
-func writeDefault(filename string, r *[]Result) {
+func writeDefault(filename string, r *[]Result) error {
 	// TODO this
 	fmt.Println("Writing default")
+	return nil
 }
 
 // Writes the slice of results to the given filename as Json.
 // Any error will exit the program with exitcode 1.
-func writeJson(filename string, r *[]Result) {
+func writeJson(filename string, r *[]Result) error {
 	b, err := json.MarshalIndent(r, "\t", "\t")
 	if err != nil {
-		fmt.Printf("Error marshaling json: %s", err)
-		os.Exit(1)
-		return // shouldn't occur
+		return fmt.Errorf("Error marshaling json: %s", err)
 	}
 
 	err = ioutil.WriteFile(filename, b, 644)
 	if err != nil {
-		fmt.Printf("Unable to write to file `%s': %s\n", filename, err)
-		os.Exit(1)
+		return fmt.Errorf("Unable to write to file `%s': %s\n", filename, err)
 	}
+
+	return nil
 }
 
 // Writes the slice of results to the given filename as CSV. If any error
 // occurs, exit with code 1.
-func writeCsv(filename string, r *[]Result) {
+func writeCsv(filename string, r *[]Result) error {
 	f, err := os.Create(filename)
 	if err != nil {
-		fmt.Printf("Unable to open file for writing `%s': %s\n", filename, err)
-		os.Exit(1)
+		return fmt.Errorf("Unable to open file for writing `%s': %s\n", filename, err)
 	}
 
 	w := csv.NewWriter(f)
@@ -119,6 +118,8 @@ func writeCsv(filename string, r *[]Result) {
 		w.Write(record)
 	}
 	w.Flush()
+
+	return nil
 }
 
 // Run the given monitors in sequential order, and return the results.
@@ -175,7 +176,10 @@ func main() {
 		fmt.Fprintf(os.Stderr, "FLAGS:\n")
 		flag.PrintDefaults()
 	}
+
 	flag.Parse()
+
+	fmt.Println(*flagVersion)
 
 	// If version is requested, report that and then exit normally.
 	if *flagVersion {
@@ -183,7 +187,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	var writeFunc func(string, *[]Result)
+	var writeFunc func(string, *[]Result) error
 	// determine type of format
 	switch *flagFormat {
 	case "":
@@ -283,11 +287,14 @@ func main() {
 	fmt.Printf("Successes: %d\n", countOk)
 	fmt.Printf("Failures:  %d\n", countFail)
 
-	// TODO: check output file and type, write it to file using the printXxxx functions.
 	if strings.TrimSpace(*flagOutfile) != "" {
 		// sanity nil check.
 		if writeFunc != nil {
-			writeFunc(*flagOutfile, &results)
+			err := writeFunc(*flagOutfile, &results)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
 		}
 	}
 }
