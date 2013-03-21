@@ -25,6 +25,7 @@ var (
 	flagVersion      = flag.Bool("version", false, "Prints out version number and exits (discards other flags).")
 	flagSequential   = flag.Bool("sequential", false, "When set, execute monitors in sequential order (not recommended for speed).")
 	flagCombine      = flag.Bool("combine", false, "If set, combine all monitors from all configurations to run, instead of per configuration.")
+	flagVerbose      = flag.Bool("verbose", false, "Set verbose output. Helpful to see input and output being sent and received.")
 )
 
 // Validates all configurations in the slice. For every failed validation,
@@ -123,14 +124,28 @@ func writeCsv(filename string, r *[]Result) error {
 	return nil
 }
 
+// When the verbose flag is supplied, each monitor is getting this as a callback
+// to output TODO: dox
+func verboseCallback(monitor *Monitor, input, output []byte) {
+	fmt.Printf("=================\n")
+	fmt.Printf("Monitor '%s'\n", monitor.Name)
+	fmt.Printf("INPUT:\n%s", string(input))
+	fmt.Printf("OUTPUT:\n%s", string(output))
+	fmt.Printf("=================\n")
+}
+
 // Run the given monitors in sequential order, and return the results.
-func runSequential(filedir string, m []Monitor) []Result {
+func runSequential(filedir string, m []Monitor, verbose bool) []Result {
 	// receiver channel
 	ch := make(chan Result)
 
 	results := make([]Result, 0)
 
 	for i := range m {
+		mon := m[i]
+		if verbose {
+			mon.Callback = verboseCallback
+		}
 		go m[i].Run(filedir, ch)
 		// immediately receive from the channel
 		result := <-ch
@@ -142,7 +157,7 @@ func runSequential(filedir string, m []Monitor) []Result {
 }
 
 // Run the given monitors in parallel order, and return the results.
-func runParallel(filedir string, m []Monitor) []Result {
+func runParallel(filedir string, m []Monitor, verbose bool) []Result {
 	// receiver channel
 	ch := make(chan Result, len(m))
 
@@ -150,7 +165,11 @@ func runParallel(filedir string, m []Monitor) []Result {
 
 	for i := range m {
 		// fire all goroutines first
-		go m[i].Run(filedir, ch)
+		mon := m[i]
+		if verbose {
+			mon.Callback = verboseCallback
+		}
+		go mon.Run(filedir, ch)
 	}
 
 	// then receive from the channel
@@ -242,11 +261,11 @@ func main() {
 
 			// should we run in parallel?
 			if !*flagSequential {
-				presults := runParallel(*flagFiledir, c.Monitors)
+				presults := runParallel(*flagFiledir, c.Monitors, *flagVerbose)
 				results = append(results, presults...)
 			} else {
 				// or sequential.
-				sresults := runSequential(*flagFiledir, c.Monitors)
+				sresults := runSequential(*flagFiledir, c.Monitors, *flagVerbose)
 				results = append(results, sresults...)
 			}
 		}
@@ -261,11 +280,11 @@ func main() {
 
 		// should we run in parallel?
 		if !*flagSequential {
-			presults := runParallel(*flagFiledir, allMonitors)
+			presults := runParallel(*flagFiledir, allMonitors, *flagVerbose)
 			results = append(results, presults...)
 		} else {
 			// or sequential.
-			sresults := runSequential(*flagFiledir, allMonitors)
+			sresults := runSequential(*flagFiledir, allMonitors, *flagVerbose)
 			results = append(results, sresults...)
 		}
 

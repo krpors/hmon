@@ -71,13 +71,14 @@ type Config struct {
 // technically, but logically some kind of validation can be done using
 // Validate().
 type Monitor struct {
-	Name        string   `xml:"name,attr"`
-	Description string   `xml:"desc,attr"`
-	Url         string   `xml:"url"`
-	File        string   `xml:"file"`
-	Timeout     int      `xml:"timeout"`
-	Headers     []Header `xml:"headers>header"`
-	Assertions  []string `xml:"assertions>assertion"`
+	Name        string                         `xml:"name,attr"`
+	Description string                         `xml:"desc,attr"`
+	Url         string                         `xml:"url"`
+	File        string                         `xml:"file"`
+	Timeout     int                            `xml:"timeout"`
+	Headers     []Header                       `xml:"headers>header"`
+	Assertions  []string                       `xml:"assertions>assertion"`
+	Callback    func(*Monitor, []byte, []byte) // callback function to check input/output
 }
 
 // Extra HTTP headers to send.
@@ -86,7 +87,11 @@ type Header struct {
 	Value string `xml:"value,attr"`
 }
 
-// timeout dialer, see https://groups.google.com/forum/?fromgroups=#!topic/golang-nuts/2ehqb6t54kA
+func (m *Monitor) notifyCallback(input, output []byte) {
+	if m.Callback != nil {
+		m.Callback(m, input, output)
+	}
+}
 
 // Runs a check for the given Monitor. There are a few things done in this function.
 // If the given input file is empty (i.e. none), a http GET is issued to the given URL.
@@ -100,7 +105,7 @@ type Header struct {
 func (m *Monitor) Run(baseDir string, c chan Result) {
 	client := http.Client{}
 
-	// when no file is specified, do a GET
+	var requestBody []byte
 	var req *http.Request
 	var err error
 
@@ -109,6 +114,7 @@ func (m *Monitor) Run(baseDir string, c chan Result) {
 	} else {
 		requestBody, err := ioutil.ReadFile(path.Join(baseDir, m.File))
 		if err != nil {
+			m.notifyCallback(requestBody, nil)
 			c <- Result{m, 0, ResultError{err}}
 			return
 		}
@@ -116,6 +122,7 @@ func (m *Monitor) Run(baseDir string, c chan Result) {
 	}
 
 	if err != nil {
+		m.notifyCallback(requestBody, nil)
 		c <- Result{m, 0, ResultError{err}}
 		return
 	}
@@ -154,6 +161,7 @@ func (m *Monitor) Run(baseDir string, c chan Result) {
 
 	select {
 	case <-time.After(timeout):
+		m.notifyCallback(requestBody, nil)
 		c <- Result{m, 0, ResultError{fmt.Errorf("timeout after %d ms", timeout/time.Millisecond)}}
 		return
 	case theResponse = <-timeoutChan:
@@ -162,6 +170,7 @@ func (m *Monitor) Run(baseDir string, c chan Result) {
 
 	// check any errors in the response itself
 	if theResponse.Err != nil {
+		m.notifyCallback(requestBody, nil)
 		c <- Result{m, 0, ResultError{theResponse.Err}}
 		return
 	}
@@ -181,6 +190,7 @@ func (m *Monitor) Run(baseDir string, c chan Result) {
 		found := rex.Find(responseContents)
 		if found == nil {
 			millis := int64(time.Now().Sub(tstart) / time.Millisecond)
+			m.notifyCallback(requestBody, responseContents)
 			c <- Result{m, millis, ResultError{fmt.Errorf("assertion failed for regex `%s'", m.Assertions[i])}}
 			return
 		}
@@ -188,6 +198,8 @@ func (m *Monitor) Run(baseDir string, c chan Result) {
 
 	// passed all tests, return true to the channel
 	millis := int64(time.Now().Sub(tstart) / time.Millisecond)
+
+	m.notifyCallback(requestBody, responseContents)
 	c <- Result{m, millis, nil}
 }
 
