@@ -78,7 +78,7 @@ type Monitor struct {
 	Timeout     int                            `xml:"timeout"`
 	Headers     []Header                       `xml:"headers>header"`
 	Assertions  []string                       `xml:"assertions>assertion"`
-	Callback    func(*Monitor, []byte, []byte) // callback function to check input/output
+	Callback    func(*Monitor, []byte, []byte) `json:"-"` // callback function to check input/output
 }
 
 // Extra HTTP headers to send.
