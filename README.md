@@ -1,4 +1,4 @@
-# hmon - a simplistic host monitor using content assertions
+# hmon - a simplistic http monitor using content assertions
 
 The idea is basically:
 
