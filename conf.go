@@ -112,7 +112,7 @@ func (m *Monitor) Run(baseDir string, c chan Result) {
 	if m.File == "" {
 		req, err = http.NewRequest("GET", m.Url, nil)
 	} else {
-		requestBody, err := ioutil.ReadFile(path.Join(baseDir, m.File))
+		requestBody, err = ioutil.ReadFile(path.Join(baseDir, m.File))
 		if err != nil {
 			m.notifyCallback(requestBody, nil)
 			c <- Result{m, 0, ResultError{err}}
