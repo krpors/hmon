@@ -100,9 +100,7 @@ func (m *Monitor) notifyCallback(input, output []byte) {
 // to test the content. If none are configured, it will just be a sort of 'ping-check',
 // i.e. checking if a connection could be made to the URL.
 //
-//  TODO is this pointer receiver really necessary? I don't think so. We're not changing
-// the `m' anyway.
-func (m *Monitor) Run(baseDir string, c chan Result) {
+func (m Monitor) Run(baseDir string, c chan Result) {
 	client := http.Client{}
 
 	var requestBody []byte
@@ -330,9 +328,16 @@ func FindConfigs(baseDir string) ([]Config, error) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Type Result encapsulates information about a Monitor and its invocation result. 
+// Type ConfigurationResult encapsulates a given configuration with the results
+// for that configuration.
+type ConfigurationResult struct {
+	ConfigurationName string   // the identifiable name of the configuration
+	Results           []Result // the results for this configuration
+}
+
+// Type Result encapsulates information about a Monitor and its invocation result.
 type Result struct {
-	Monitor *Monitor // the monitor which may or may not have failed.
+	Monitor Monitor // the monitor which may or may not have failed.
 	Latency int64    // The latency of the call i.e. how long did it take (in ms)
 	Error   error    // An error, describing the possible failure. If nil, it's ok.
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/csv"
 	"encoding/json"
+	"encoding/xml"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -12,7 +13,7 @@ import (
 )
 
 // the version string for hmon.
-const VERSION string = "1.0.3"
+const VERSION string = "1.0.4"
 
 // cmdline flag variables
 var (
@@ -20,8 +21,8 @@ var (
 	flagConfdir      = flag.String("confdir", ".", "Directory with configurations of *_hmon.xml files.")
 	flagFiledir      = flag.String("filedir", ".", "Base directory to search for request files. If ommited, the current working directory is used.")
 	flagValidateOnly = flag.Bool("validate", false, "When specified, only validate the configuration file(s), but don't run the monitors.")
-	flagOutfile      = flag.String("outfile", "", "Output to given file. If empty, output will be done to stdout only.")
-	flagFormat       = flag.String("format", "", "Output format ('csv', 'json'). Only suitable in combination with -outfile .")
+	flagOutput       = flag.String("output", "", "Output file or directory. If empty, output will be done to stdout only.")
+	flagFormat       = flag.String("format", "", "Output format ('csv', 'json', 'pandora'). Only suitable in combination with -outfile .")
 	flagVersion      = flag.Bool("version", false, "Prints out version number and exits (discards other flags).")
 	flagSequential   = flag.Bool("sequential", false, "When set, execute monitors in sequential order (not recommended for speed).")
 	flagCombine      = flag.Bool("combine", false, "If set, combine all monitors from all configurations to run, instead of per configuration.")
@@ -40,6 +41,8 @@ func validateConfigurations(configurations *[]Config) {
 	// boolean indicating that configurations are not valid.
 	var success bool = true
 	var totalerrs int8 = 0
+
+	// TODO: check for uniqueness of monitor NAMES, emit warning if not unique.
 
 	for i := range *configurations {
 		c := (*configurations)[i]
@@ -72,7 +75,7 @@ func validateConfigurations(configurations *[]Config) {
 }
 
 // Writes a non-specialized format to the given filename.
-func writeDefault(filename string, r *[]Result) error {
+func writeDefault(filename string, r *[]ConfigurationResult) error {
 	// TODO this
 	fmt.Println("Writing default")
 	return nil
@@ -80,8 +83,8 @@ func writeDefault(filename string, r *[]Result) error {
 
 // Writes the slice of results to the given filename as Json.
 // Any error will exit the program with exitcode 1.
-func writeJson(filename string, r *[]Result) error {
-	b, err := json.MarshalIndent(r, "\t", "\t")
+func writeJson(filename string, r *[]ConfigurationResult) error {
+	b, err := json.MarshalIndent(r, "  ", "  ")
 	if err != nil {
 		return fmt.Errorf("Error marshaling json: %s", err)
 	}
@@ -96,7 +99,7 @@ func writeJson(filename string, r *[]Result) error {
 
 // Writes the slice of results to the given filename as CSV. If any error
 // occurs, exit with code 1.
-func writeCsv(filename string, r *[]Result) error {
+func writeCsv(filename string, results *[]ConfigurationResult) error {
 	f, err := os.Create(filename)
 
 	if err != nil {
@@ -105,23 +108,76 @@ func writeCsv(filename string, r *[]Result) error {
 
 	w := csv.NewWriter(f)
 
-	for _, e := range *r {
-		var status string = "FAIL"
-		if e.Error == nil {
-			status = "OK"
-		}
+	for _, r := range *results {
+		for _, res := range r.Results {
+			var status string = "FAIL"
+			if res.Error == nil {
+				status = "OK"
+			}
 
-		record := []string{
-			status,
-			e.Monitor.Name,
-			e.Monitor.Url,
-			strconv.FormatInt(e.Latency, 10),
+			record := []string{
+				status,
+				res.Monitor.Name,
+				res.Monitor.Url,
+				strconv.FormatInt(res.Latency, 10),
+			}
+			w.Write(record)
 		}
-		w.Write(record)
 	}
 	w.Flush()
 
 	return nil
+}
+
+// Writes all results to Pandora Agent interpretable XML files.
+func writePandoraAgents(outdir string, results *[]ConfigurationResult) error {
+	fmt.Printf("Writing to %s, %d results\n", outdir, len(*results))
+
+	for _, result := range *results {
+		pfmsAgent := PfmsAgent{}
+		pfmsAgent.AgentName = result.ConfigurationName
+		for _, actualResult := range result.Results {
+			module := PfmsModule{}
+			module.Name = actualResult.Monitor.Name
+			module.Type = "generic_data"
+			module.Description = actualResult.Monitor.Description
+			if actualResult.Error != nil {
+				module.Data = "-1"
+			} else {
+				module.Data = strconv.FormatInt(actualResult.Latency, 10)
+			}
+
+			pfmsAgent.Modules = append(pfmsAgent.Modules, module)
+		}
+
+		// write agent to file...
+		xmlBytes, err := xml.MarshalIndent(pfmsAgent, " ", "   ")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Could not marshal PFMS data to bytes: %s\n", err)
+			os.Exit(1)
+		}
+		err = ioutil.WriteFile("pandora_test.xml", xmlBytes, 0644)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Could not write to file: %s\n", err)
+			os.Exit(1)
+		}
+	}
+
+	return nil
+}
+
+type PfmsAgent struct {
+	XMLName   struct{}     `xml:"agent_data"`
+	AgentName string       `xml:"agent_name"`
+	Timestamp string       `xml:"timestamp,omitempty"` //TODO: Timestamp indicating when the XML file was generated (YYYY/MM/DD HH:MM:SS).
+	Modules   []PfmsModule `xml:"module"`
+}
+
+type PfmsModule struct {
+	Name        string `xml:"name"`
+	Type        string `xml:"type"`
+	Description string `xml:"description,omitempty"`
+	Data        string `xml:"data"`
 }
 
 // When the verbose flag is supplied, each monitor is getting this as a callback
@@ -129,43 +185,42 @@ func writeCsv(filename string, r *[]Result) error {
 func verboseCallback(monitor *Monitor, input, output []byte) {
 	fmt.Printf("=================\n")
 	fmt.Printf("Monitor '%s'\n", monitor.Name)
-	fmt.Printf("INPUT:\n%s", string(input))
-	fmt.Printf("OUTPUT:\n%s", string(output))
+	fmt.Printf("INPUT:\n%s\n", string(input))
+	fmt.Printf("OUTPUT:\n%s\n", string(output))
 	fmt.Printf("=================\n")
 }
 
 // Run the given monitors in sequential order, and return the results.
-func runSequential(filedir string, m []Monitor, verbose bool) []Result {
+func runSequential(filedir string, config Config, verbose bool) ConfigurationResult {
 	// receiver channel
 	ch := make(chan Result)
 
-	results := make([]Result, 0)
+	results := ConfigurationResult{}
+	results.ConfigurationName = config.Name
 
-	for i := range m {
-		mon := m[i]
+	for _, mon := range config.Monitors {
 		if verbose {
 			mon.Callback = verboseCallback
 		}
-		go m[i].Run(filedir, ch)
+		go mon.Run(filedir, ch)
 		// immediately receive from the channel
 		result := <-ch
-		results = append(results, result)
+		results.Results = append(results.Results, result)
 		fmt.Printf("%s\n", result)
 	}
 
 	return results
 }
 
-// Run the given monitors in parallel order, and return the results.
-func runParallel(filedir string, m []Monitor, verbose bool) []Result {
+func runParallel(filedir string, config Config, verbose bool) ConfigurationResult {
 	// receiver channel
-	ch := make(chan Result, len(m))
+	ch := make(chan Result, len(config.Monitors))
 
-	results := make([]Result, 0)
+	results := ConfigurationResult{}
+	results.ConfigurationName = config.Name
 
-	for i := range m {
+	for _, mon := range config.Monitors {
 		// fire all goroutines first
-		mon := m[i]
 		if verbose {
 			mon.Callback = verboseCallback
 		}
@@ -173,13 +228,37 @@ func runParallel(filedir string, m []Monitor, verbose bool) []Result {
 	}
 
 	// then receive from the channel
-	for _ = range m {
+	for _ = range config.Monitors {
 		result := <-ch
-		results = append(results, result)
+		results.Results = append(results.Results, result)
 		fmt.Printf("%s\n", result)
 	}
 
 	return results
+}
+
+// Prints a short execution summary using all the results gathered.
+func printExecutionSummary(configResults []ConfigurationResult) {
+	var total int = 0
+	var countOk int = 0
+	var countFail int = 0
+
+	for _, cr := range configResults {
+		for _, res := range cr.Results {
+			total++
+			if res.Error == nil {
+				countOk++
+			} else {
+				countFail++
+			}
+		}
+	}
+
+	fmt.Printf("\nExecution summary:\n")
+	fmt.Printf("Monitors:  %d\n", total)
+	fmt.Printf("Successes: %d\n", countOk)
+	fmt.Printf("Failures:  %d\n", countFail)
+
 }
 
 // Entry point of this program.
@@ -193,7 +272,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Normal output is done to the standard output, and using the flag -outfile\n")
 		fmt.Fprintf(os.Stderr, "combined with -outtype the results can be written to different file formats.\n\n")
 		fmt.Fprintf(os.Stderr, "For more information, check the GitHub page at http://github.com/krpors/hmon.\n\n")
-		fmt.Fprintf(os.Stderr, "FLAGS:\n")
+		fmt.Fprintf(os.Stderr, "FLAGS (with defaults):\n")
 		flag.PrintDefaults()
 	}
 
@@ -205,7 +284,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	var writeFunc func(string, *[]Result) error
+	var writeFunc func(string, *[]ConfigurationResult) error
 	// determine type of format
 	switch *flagFormat {
 	case "":
@@ -217,10 +296,26 @@ func main() {
 	case "csv":
 		writeFunc = writeCsv
 		break
+	case "pandora":
+		writeFunc = writePandoraAgents
+		break
 	default:
 		// unknown output format. Bail out
 		fmt.Printf("Unknown output format: %s\n", *flagFormat)
 		os.Exit(1)
+	}
+
+	// check if the output format is pandora, and if we are trying to combine the monitors.
+	// if so, bail out since the combination does not work out well... FOR NOW XXX XXX XXX check this!
+	if *flagFormat == "pandora" && *flagCombine {
+		fmt.Fprintf(os.Stderr, "Using output type 'pandora' with -combine will not yield correct results.\n")
+		os.Exit(1)
+	}
+
+	// Emit a warning that no output file or directory is specified. Only tell the user
+	// this when a different format is specified.
+	if *flagFormat != "" && strings.TrimSpace(*flagOutput) == "" {
+		fmt.Printf("Warning: no explicit output file or directory specified. No file(s) will be created!\n")
 	}
 
 	var configurations []Config
@@ -252,7 +347,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	results := make([]Result, 0)
+	var configResults []ConfigurationResult
 
 	// Are we supposed to run the monitors per configuration?
 	if !*flagCombine {
@@ -260,14 +355,14 @@ func main() {
 			fmt.Printf("Processing configuration `%s' with %d monitors\n", c.Name, len(c.Monitors))
 
 			// should we run in parallel?
+			var cr ConfigurationResult
 			if !*flagSequential {
-				presults := runParallel(*flagFiledir, c.Monitors, *flagVerbose)
-				results = append(results, presults...)
+				cr = runParallel(*flagFiledir, c, *flagVerbose)
 			} else {
 				// or sequential.
-				sresults := runSequential(*flagFiledir, c.Monitors, *flagVerbose)
-				results = append(results, sresults...)
+				cr = runSequential(*flagFiledir, c, *flagVerbose)
 			}
+			configResults = append(configResults, cr)
 		}
 	} else {
 		// or are we combining them all in one large slice of Monitors first?
@@ -276,39 +371,31 @@ func main() {
 			allMonitors = append(allMonitors, c.Monitors...)
 		}
 
+		combinedConfig := Config{}
+		combinedConfig.Name = "Combined hmon configuration"
+		combinedConfig.Monitors = allMonitors
+
 		fmt.Printf("Running %d monitors from %d configurations combined.\n", len(allMonitors), len(configurations))
 
 		// should we run in parallel?
+		var cr ConfigurationResult
 		if !*flagSequential {
-			presults := runParallel(*flagFiledir, allMonitors, *flagVerbose)
-			results = append(results, presults...)
+			cr = runParallel(*flagFiledir, combinedConfig, *flagVerbose)
 		} else {
 			// or sequential.
-			sresults := runSequential(*flagFiledir, allMonitors, *flagVerbose)
-			results = append(results, sresults...)
+			cr = runSequential(*flagFiledir, combinedConfig, *flagVerbose)
 		}
+		configResults = append(configResults, cr)
 
 	}
 
-	var countOk int = 0
-	var countFail int = 0
-	for _, r := range results {
-		if r.Error == nil {
-			countOk++
-		} else {
-			countFail++
-		}
-	}
+	// print execution summary with totals, amount failed, amount ok, etc.
+	printExecutionSummary(configResults)
 
-	fmt.Printf("\nExecution summary:\n")
-	fmt.Printf("Monitors:  %d\n", len(results))
-	fmt.Printf("Successes: %d\n", countOk)
-	fmt.Printf("Failures:  %d\n", countFail)
-
-	if strings.TrimSpace(*flagOutfile) != "" {
+	if strings.TrimSpace(*flagOutput) != "" {
 		// sanity nil check.
 		if writeFunc != nil {
-			err := writeFunc(*flagOutfile, &results)
+			err := writeFunc(*flagOutput, &configResults)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
