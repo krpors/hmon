@@ -212,13 +212,22 @@ func (c *Config) Validate() error {
 	verr := ValidationError{}
 
 	if strings.TrimSpace(c.Name) == "" {
-		verr.Add("root node hmonconfig requires a non-empty name attribute")
+		verr.Add("root node <hmonconfig> requires a non-empty 'name' attribute")
 	}
 
-	for monidx := range c.Monitors {
-		mon := c.Monitors[monidx]
+	monitorNames := make(map[string]bool)
+
+	for monidx, mon := range c.Monitors {
 		if mon.Name == "" {
-			verr.Add(fmt.Sprintf("monitor[%d]: must have a non-empty name attribute", monidx))
+			verr.Add(fmt.Sprintf("monitor[%d]: requires a non-empty 'name' attribute", monidx))
+		} else {
+			// to ensure monitor name uniqueness, we're putting them in a map and check
+			// if it's already defined earlier.
+			if monitorNames[mon.Name] {
+				verr.Add(fmt.Sprintf("monitor[%d] with name '%s' is already defined", monidx, mon.Name))
+			} else {
+				monitorNames[mon.Name] = true
+			}
 		}
 
 		if mon.Url == "" {

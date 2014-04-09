@@ -15,7 +15,7 @@ import (
 )
 
 // the version string for hmon.
-const VERSION string = "1.0.4"
+const VERSION string = "1.0.5"
 
 // cmdline flag variables
 var (
@@ -44,10 +44,8 @@ func validateConfigurations(configurations *[]Config) {
 	var success bool = true
 	var totalerrs int8 = 0
 
-	// TODO: check for uniqueness of monitor NAMES, emit warning if not unique.
-
-	for i := range *configurations {
-		c := (*configurations)[i]
+	// first, check for failures in monitors inside a each configuration
+	for _, c := range *configurations {
 		err := c.Validate()
 		if err != nil {
 			// we got validation errors.
@@ -59,19 +57,41 @@ func validateConfigurations(configurations *[]Config) {
 			}
 
 			success = false
+			fmt.Println()
 		}
+	}
 
+	// TODO: check for uniqueness of monitor NAMES, emit warning if not unique.
+	mapConfigNames := make(map[string]string) // map is configname:filename
+
+	// secondly, check for the uniqueness of the hmonconfig names (attribute in the root node)
+	for _, c := range *configurations {
+		filename, foundInMap := mapConfigNames[c.Name]
+		if foundInMap {
+			fmt.Printf("%s: hmonconfig name '%s' is already defined in file '%s'\n", c.FileName, c.Name, filename)
+			success = false
+			totalerrs++
+		} else {
+			mapConfigNames[c.Name] = c.FileName
+		}
 	}
 
 	if !success {
-		fmt.Printf("\nFailed due to a total of %d validation errors.\n", totalerrs)
+		var plural string = "errors"
+		if totalerrs <= 1 {
+			plural = "error"
+		}
+		fmt.Printf("\nFailed due to a total of %d validation %s.\n", totalerrs, plural)
 		os.Exit(1)
 	}
 
 	// Is a flag provided that we only should do configuration validation?
 	if *flagValidateOnly {
 		// if so, no point in continuing. Exit code 0 to indicate an a-okay.
-		fmt.Println("ok")
+		fmt.Printf("All configuration files (%d) are correctly validated:\n", len(*configurations))
+		for _, c := range *configurations {
+			fmt.Printf("  %s\n", c.FileName)
+		}
 		os.Exit(0)
 	}
 }
@@ -379,6 +399,8 @@ func main() {
 				cr = runSequential(*flagFiledir, c, *flagVerbose)
 			}
 			configResults = append(configResults, cr)
+
+			fmt.Println()
 		}
 	} else {
 		// or are we combining them all in one large slice of Monitors first?
