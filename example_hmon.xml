@@ -28,4 +28,9 @@
             <assertion>NIL</assertion>
         </assertions>
     </monitor>
+    <monitor name="OMGWTFBBQ">
+        <url>http://omgwtfbbq.nl</url>
+        <timeout>1000</timeout>
+    </monitor>
+
 </hmonconfig>

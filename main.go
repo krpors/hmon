@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // the version string for hmon.
@@ -131,11 +133,15 @@ func writeCsv(filename string, results *[]ConfigurationResult) error {
 
 // Writes all results to Pandora Agent interpretable XML files.
 func writePandoraAgents(outdir string, results *[]ConfigurationResult) error {
-	fmt.Printf("Writing to %s, %d results\n", outdir, len(*results))
+	fmt.Printf("Writing %d configuration results to %s\n", len(*results), outdir)
 
 	for _, result := range *results {
+
 		pfmsAgent := PfmsAgent{}
 		pfmsAgent.AgentName = result.ConfigurationName
+		pfmsAgent.Timestamp = CreatePfmsTimstamp()
+		pfmsAgent.GroupName = "Web Services" // ugh, currently hardcoded. Ah well, we'll fix that later.
+
 		for _, actualResult := range result.Results {
 			module := PfmsModule{}
 			module.Name = actualResult.Monitor.Name
@@ -156,7 +162,9 @@ func writePandoraAgents(outdir string, results *[]ConfigurationResult) error {
 			fmt.Fprintf(os.Stderr, "Could not marshal PFMS data to bytes: %s\n", err)
 			os.Exit(1)
 		}
-		err = ioutil.WriteFile("pandora_test.xml", xmlBytes, 0644)
+		outputFile := fmt.Sprintf("%s-%d.xml", result.ConfigurationName, time.Now().Unix())
+		outputPath := path.Join(outdir, outputFile)
+		err = ioutil.WriteFile(outputPath, xmlBytes, 0644)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Could not write to file: %s\n", err)
 			os.Exit(1)
@@ -166,9 +174,17 @@ func writePandoraAgents(outdir string, results *[]ConfigurationResult) error {
 	return nil
 }
 
+// Returns a timestamp in the format of yyyy/MM/dd HH:mm:ss, because a Pandora Agent expects it like that.
+// Hooray for no ISO 8601!
+func CreatePfmsTimstamp() string {
+	currenttime := time.Now()
+	return currenttime.Format("2006/01/02 15:04:05")
+}
+
 type PfmsAgent struct {
 	XMLName   struct{}     `xml:"agent_data"`
-	AgentName string       `xml:"agent_name"`
+	AgentName string       `xml:"agent_name,attr"`
+	GroupName string       `xml:"group,attr"`
 	Timestamp string       `xml:"timestamp,omitempty"` //TODO: Timestamp indicating when the XML file was generated (YYYY/MM/DD HH:MM:SS).
 	Modules   []PfmsModule `xml:"module"`
 }
@@ -391,6 +407,8 @@ func main() {
 
 	// print execution summary with totals, amount failed, amount ok, etc.
 	printExecutionSummary(configResults)
+
+	fmt.Println()
 
 	if strings.TrimSpace(*flagOutput) != "" {
 		// sanity nil check.
