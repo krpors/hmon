@@ -24,7 +24,7 @@ var (
 	flagFiledir      = flag.String("filedir", ".", "Base directory to search for request files. If ommited, the current working directory is used.")
 	flagValidateOnly = flag.Bool("validate", false, "When specified, only validate the configuration file(s), but don't run the monitors.")
 	flagOutput       = flag.String("output", "", "Output file or directory. If empty, output will be done to stdout only.")
-	flagFormat       = flag.String("format", "", "Output format ('csv', 'json', 'pandora'). Only suitable in combination with -outfile .")
+	flagFormat       = flag.String("format", "", "Output format ('csv', 'json', 'pandora'). Only suitable in combination with -output.")
 	flagVersion      = flag.Bool("version", false, "Prints out version number and exits (discards other flags).")
 	flagSequential   = flag.Bool("sequential", false, "When set, execute monitors in sequential order (not recommended for speed).")
 	flagCombine      = flag.Bool("combine", false, "If set, combine all monitors from all configurations to run, instead of per configuration.")
@@ -153,7 +153,7 @@ func writeCsv(filename string, results *[]ConfigurationResult) error {
 
 // Writes all results to Pandora Agent interpretable XML files.
 func writePandoraAgents(outdir string, results *[]ConfigurationResult) error {
-	fmt.Printf("Writing %d configuration results to %s\n", len(*results), outdir)
+	fmt.Printf("Writing %d configuration results to output directory '%s'\n", len(*results), outdir)
 
 	for _, result := range *results {
 
@@ -301,14 +301,25 @@ func printExecutionSummary(configResults []ConfigurationResult) {
 func main() {
 	// cmdline usage function. Prints out to stderr of course.
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "hmon version %s\n\n", VERSION)
-		fmt.Fprintf(os.Stderr, "A simplistic host monitor using content assertions. This tool connects to\n")
-		fmt.Fprintf(os.Stderr, "configured http serving hosts, issues a request and checks the content using\n")
-		fmt.Fprintf(os.Stderr, "regular expression 'assertions'.\n\n")
-		fmt.Fprintf(os.Stderr, "Normal output is done to the standard output, and using the flag -outfile\n")
-		fmt.Fprintf(os.Stderr, "combined with -outtype the results can be written to different file formats.\n\n")
-		fmt.Fprintf(os.Stderr, "For more information, check the GitHub page at http://github.com/krpors/hmon.\n\n")
-		fmt.Fprintf(os.Stderr, "FLAGS (with defaults):\n")
+		fmt.Fprintf(os.Stderr, "hmon version %s\n", VERSION)
+		fmt.Fprintf(os.Stderr, `
+A simplistic host monitor using content assertions. This tool connects to
+configured http serving hosts, issues a request and checks the content using
+regular expression 'assertions'. Requests can be sent with data, or without.
+When data is sent, the HTTP method is automatically a POST. Without data,
+the HTTP method will be a GET.
+
+(Normal) output will always be written to the stdout. Using the flags -format
+and -output, the tool can write to other output formats:
+
+-format=json:    Javascript Object Notation
+-format=csv:     Comma Separated Values
+-format=pandora  PandoraFMS agent data (XML)
+
+For more information, check the GitHub page at http://github.com/krpors/hmon.
+
+FLAGS (with defaults):
+`)
 		flag.PrintDefaults()
 	}
 
