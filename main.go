@@ -159,7 +159,6 @@ func writePandoraAgents(outdir string, results *[]ConfigurationResult) error {
 
 		pfmsAgent := PfmsAgent{}
 		pfmsAgent.AgentName = result.ConfigurationName
-		pfmsAgent.Timestamp = CreatePfmsTimstamp()
 		pfmsAgent.GroupName = "Web Services" // ugh, currently hardcoded. Ah well, we'll fix that later.
 
 		for _, actualResult := range result.Results {
@@ -169,9 +168,14 @@ func writePandoraAgents(outdir string, results *[]ConfigurationResult) error {
 			module.Description = actualResult.Monitor.Description
 			if actualResult.Error != nil {
 				module.Data = "-1"
+				module.Status = "CRITICAL"
 			} else {
 				module.Data = strconv.FormatInt(actualResult.Latency, 10)
+				module.Status = "NORMAL"
 			}
+
+			// TODO: if the response time is a certain percentage of the timeout value
+			// specified, make it a warning or some such? Preferrably configurable.
 
 			pfmsAgent.Modules = append(pfmsAgent.Modules, module)
 		}
@@ -182,7 +186,7 @@ func writePandoraAgents(outdir string, results *[]ConfigurationResult) error {
 			fmt.Fprintf(os.Stderr, "Could not marshal PFMS data to bytes: %s\n", err)
 			os.Exit(1)
 		}
-		outputFile := fmt.Sprintf("%s-%d.xml", result.ConfigurationName, time.Now().Unix())
+		outputFile := fmt.Sprintf("agent-%s-%d.data", result.ConfigurationName, time.Now().Unix())
 		outputPath := path.Join(outdir, outputFile)
 		err = ioutil.WriteFile(outputPath, xmlBytes, 0644)
 		if err != nil {
@@ -194,18 +198,10 @@ func writePandoraAgents(outdir string, results *[]ConfigurationResult) error {
 	return nil
 }
 
-// Returns a timestamp in the format of yyyy/MM/dd HH:mm:ss, because a Pandora Agent expects it like that.
-// Hooray for no ISO 8601!
-func CreatePfmsTimstamp() string {
-	currenttime := time.Now()
-	return currenttime.Format("2006/01/02 15:04:05")
-}
-
 type PfmsAgent struct {
 	XMLName   struct{}     `xml:"agent_data"`
 	AgentName string       `xml:"agent_name,attr"`
 	GroupName string       `xml:"group,attr"`
-	Timestamp string       `xml:"timestamp,omitempty"` //TODO: Timestamp indicating when the XML file was generated (YYYY/MM/DD HH:MM:SS).
 	Modules   []PfmsModule `xml:"module"`
 }
 
@@ -214,6 +210,7 @@ type PfmsModule struct {
 	Type        string `xml:"type"`
 	Description string `xml:"description,omitempty"`
 	Data        string `xml:"data"`
+	Status		string `xml:"status,omitempty"` // NORMAL, WARNING or CRITICAL
 }
 
 // When the verbose flag is supplied, each monitor is getting this as a callback
