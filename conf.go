@@ -138,7 +138,7 @@ func (m Monitor) Run(baseDir string, c chan Result) {
 		Resp *http.Response
 		Err  error
 	}
-	timeoutChan := make(chan response)
+	timeoutChan := make(chan response, 1)
 
 	// run the Do in a goroutine, and write the response to the timeout channel.
 	go func() {
