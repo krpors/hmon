@@ -164,18 +164,17 @@ func writePandoraAgents(outdir string, results *[]ConfigurationResult) error {
 		for _, actualResult := range result.Results {
 			module := PfmsModule{}
 			module.Name = actualResult.Monitor.Name
-			module.Type = "generic_data"
 			module.Description = actualResult.Monitor.Description
+
 			if actualResult.Error != nil {
-				module.Data = "-1"
+				module.Data = actualResult.Error.Error()
+				module.Type = "generic_data_string" // indicates string data
 				module.Status = "CRITICAL"
 			} else {
 				module.Data = strconv.FormatInt(actualResult.Latency, 10)
+				module.Type = "generic_data" // this indicates numeric data
 				module.Status = "NORMAL"
 			}
-
-			// TODO: if the response time is a certain percentage of the timeout value
-			// specified, make it a warning or some such? Preferrably configurable.
 
 			pfmsAgent.Modules = append(pfmsAgent.Modules, module)
 		}
