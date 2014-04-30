@@ -17,5 +17,6 @@ format which can be displayed periodically.
 
 # Documentation
 
-Please refer to http://godoc.org/github.com/krpors/hmon for in depth documentation (which
-is generated via the `doc.go` file).
+Please refer to  GoDoc:
+
+[![GoDoc](https://godoc.org/github.com/krpors/hmon?status.png)](https://godoc.org/github.com/krpors/hmon)
