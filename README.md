@@ -10,10 +10,10 @@ The idea is basically:
 
 # Why?
 
-At work, I'm maintaining several of these ugly SOAP services. Right now I'm periodically
-checking the state of these services using SoapUI, which is IMHO a heavy-weight piece of
-crap. I wanted something configurable using the command-line and Go. The production servers
-already have some kind of monitoring, but our (4) non-production servers do not.
+At work, I'm maintaining several SOAP services. Checking the uptime of these
+services by manually invoking with, let's say SoapUI, works beautifully. I wanted
+something on the commandline however, which produces results to JSON, CSV or other
+format which can be displayed periodically.
 
 # Documentation
 
