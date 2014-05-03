@@ -185,7 +185,8 @@ func writePandoraAgents(outdir string, results *[]ConfigurationResult) error {
 			fmt.Fprintf(os.Stderr, "Could not marshal PFMS data to bytes: %s\n", err)
 			os.Exit(1)
 		}
-		outputFile := fmt.Sprintf("agent-%s-%d.data", result.ConfigurationName, time.Now().Unix())
+		// As of PandoraFMS 5.0? The filename HAS to be named '$NAME.$TIMESTAMP.data' for some reason :/
+		outputFile := fmt.Sprintf("%s.%d.data", result.ConfigurationName, time.Now().Unix())
 		outputPath := path.Join(outdir, outputFile)
 		err = ioutil.WriteFile(outputPath, xmlBytes, 0644)
 		if err != nil {
