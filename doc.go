@@ -79,7 +79,7 @@ Specify a SINGLE configuration file to run. If this flag is specified
 
 	-confdir="."
 
-The directory where the _hmon.xml files are stored. All files will be parsed
+The directory where the _hmon.toml files are stored. All files will be parsed
 and validated, and are used to run all monitors within these files.
 
 	-filedir="."
@@ -124,17 +124,17 @@ A list of examples of running hmon:
 
 	./hmon -confdir "./hmonconfigs/" -output "./results" -format pandora
 
-Will search in ./hmonconfigs/ for _hmon.xml files. Output is written to ./results/
+Will search in ./hmonconfigs/ for _hmon.toml files. Output is written to ./results/
 in the PandoraFMS format (files per configuration will be written).
 
 	./hmon -confdir "./hmonconfigs/" -output "results.json" -format json
 
-Will search in ./hmonconfigs/ for _hmon.xml files, and will write JSON output
+Will search in ./hmonconfigs/ for _hmon.toml files, and will write JSON output
 to the results.json file.
 
 	./hmon -confdir "./hmonconfigs/" -sequential
 
-Will search in ./hmonconfigs/ for _hmon.xml files, and executes the monitors
+Will search in ./hmonconfigs/ for _hmon.toml files, and executes the monitors
 sequentially, only writing output to stdout.
 */
 package main
