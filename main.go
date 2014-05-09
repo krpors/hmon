@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"flag"
 	"fmt"
+	"github.com/BurntSushi/toml"
 	"io/ioutil"
 	"os"
 	"path"
@@ -15,7 +16,7 @@ import (
 )
 
 // the version string for hmon.
-const VERSION string = "1.0.5"
+const VERSION string = "1.1.0"
 
 // cmdline flag variables
 var (
@@ -27,7 +28,6 @@ var (
 	flagFormat       = flag.String("format", "", "Output format ('csv', 'json', 'pandora'). Only suitable in combination with -output.")
 	flagVersion      = flag.Bool("version", false, "Prints out version number and exits (discards other flags).")
 	flagSequential   = flag.Bool("sequential", false, "When set, execute monitors in sequential order (not recommended for speed).")
-	flagCombine      = flag.Bool("combine", false, "If set, combine all monitors from all configurations to run, instead of per configuration.")
 	flagVerbose      = flag.Bool("verbose", false, "Set verbose output. Helpful to see input and output being sent and received.")
 )
 
@@ -46,7 +46,7 @@ func validateConfigurations(configurations *[]Config) {
 
 	// first, check for failures in monitors inside a each configuration
 	for _, c := range *configurations {
-		err := c.Validate()
+		err := c.Validate(*flagFiledir)
 		if err != nil {
 			// we got validation errors.
 			verr := err.(ValidationError)
@@ -77,7 +77,7 @@ func validateConfigurations(configurations *[]Config) {
 	}
 
 	if !success {
-		var plural string = "errors"
+		plural := "errors"
 		if totalerrs <= 1 {
 			plural = "error"
 		}
@@ -210,7 +210,7 @@ type PfmsModule struct {
 	Type        string `xml:"type"`
 	Description string `xml:"description,omitempty"`
 	Data        string `xml:"data"`
-	Status		string `xml:"status,omitempty"` // NORMAL, WARNING or CRITICAL
+	Status      string `xml:"status,omitempty"` // NORMAL, WARNING or CRITICAL
 }
 
 // When the verbose flag is supplied, each monitor is getting this as a callback
@@ -231,7 +231,7 @@ func runSequential(filedir string, config Config, verbose bool) ConfigurationRes
 	results := ConfigurationResult{}
 	results.ConfigurationName = config.Name
 
-	for _, mon := range config.Monitors {
+	for _, mon := range config.Monitor {
 		if verbose {
 			mon.Callback = verboseCallback
 		}
@@ -247,12 +247,12 @@ func runSequential(filedir string, config Config, verbose bool) ConfigurationRes
 
 func runParallel(filedir string, config Config, verbose bool) ConfigurationResult {
 	// receiver channel
-	ch := make(chan Result, len(config.Monitors))
+	ch := make(chan Result, len(config.Monitor))
 
 	results := ConfigurationResult{}
 	results.ConfigurationName = config.Name
 
-	for _, mon := range config.Monitors {
+	for _, mon := range config.Monitor {
 		// fire all goroutines first
 		if verbose {
 			mon.Callback = verboseCallback
@@ -261,7 +261,7 @@ func runParallel(filedir string, config Config, verbose bool) ConfigurationResul
 	}
 
 	// then receive from the channel
-	for _ = range config.Monitors {
+	for _ = range config.Monitor {
 		result := <-ch
 		results.Results = append(results.Results, result)
 		fmt.Printf("%s\n", result)
@@ -292,6 +292,28 @@ func printExecutionSummary(configResults []ConfigurationResult) {
 	fmt.Printf("Successes: %d\n", countOk)
 	fmt.Printf("Failures:  %d\n", countFail)
 
+}
+
+type C struct {
+	Name    string
+	Monitor map[string]Mon
+}
+
+type Mon struct {
+	Url        string
+	Timeout    int64
+	File       string
+	Headers    []string
+	Assertions []string
+}
+
+func _main() {
+	c := C{}
+	_, err := toml.DecodeFile("config_hmon.toml", &c)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(c)
 }
 
 // Entry point of this program.
@@ -349,13 +371,6 @@ FLAGS (with defaults):
 		os.Exit(1)
 	}
 
-	// check if the output format is pandora, and if we are trying to combine the monitors.
-	// if so, bail out since the combination does not work out well... FOR NOW XXX XXX XXX check this!
-	if *flagFormat == "pandora" && *flagCombine {
-		fmt.Fprintf(os.Stderr, "Using output type 'pandora' with -combine will not yield correct results.\n")
-		os.Exit(1)
-	}
-
 	// Emit a warning that no output file or directory is specified. Only tell the user
 	// this when a different format is specified.
 	if *flagFormat != "" && strings.TrimSpace(*flagOutput) == "" {
@@ -393,46 +408,20 @@ FLAGS (with defaults):
 
 	var configResults []ConfigurationResult
 
-	// Are we supposed to run the monitors per configuration?
-	if !*flagCombine {
-		for _, c := range configurations {
-			fmt.Printf("Processing configuration `%s' with %d monitors\n", c.Name, len(c.Monitors))
-
-			// should we run in parallel?
-			var cr ConfigurationResult
-			if !*flagSequential {
-				cr = runParallel(*flagFiledir, c, *flagVerbose)
-			} else {
-				// or sequential.
-				cr = runSequential(*flagFiledir, c, *flagVerbose)
-			}
-			configResults = append(configResults, cr)
-
-			fmt.Println()
-		}
-	} else {
-		// or are we combining them all in one large slice of Monitors first?
-		allMonitors := make([]Monitor, 0)
-		for _, c := range configurations {
-			allMonitors = append(allMonitors, c.Monitors...)
-		}
-
-		combinedConfig := Config{}
-		combinedConfig.Name = "Combined hmon configuration"
-		combinedConfig.Monitors = allMonitors
-
-		fmt.Printf("Running %d monitors from %d configurations combined.\n", len(allMonitors), len(configurations))
+	for _, c := range configurations {
+		fmt.Printf("Processing configuration `%s' with %d monitors\n", c.Name, len(c.Monitor))
 
 		// should we run in parallel?
 		var cr ConfigurationResult
 		if !*flagSequential {
-			cr = runParallel(*flagFiledir, combinedConfig, *flagVerbose)
+			cr = runParallel(*flagFiledir, c, *flagVerbose)
 		} else {
 			// or sequential.
-			cr = runSequential(*flagFiledir, combinedConfig, *flagVerbose)
+			cr = runSequential(*flagFiledir, c, *flagVerbose)
 		}
 		configResults = append(configResults, cr)
 
+		fmt.Println()
 	}
 
 	// print execution summary with totals, amount failed, amount ok, etc.

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
+	"github.com/BurntSushi/toml"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -15,7 +16,13 @@ import (
 )
 
 // Default timeout in seconds
-const TIMEOUT_DEFAULT int = 60
+const TimeoutDefault int = 60
+
+/*
+ * ===============================================================================
+ * Error type used for reporting validation errors on the configuration file.
+ * ===============================================================================
+ */
 
 // ValidationError, used to return when validation fails.
 type ValidationError struct {
@@ -57,49 +64,105 @@ func (r ResultError) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf("\"%s\"", r.Err)), nil
 }
 
+/*
+ * ===============================================================================
+ * Main configuration structure. Parsed through reflection by the toml proc.
+ * ===============================================================================
+ */
+
 // Root configuration node, contains zero or more Monitor
 // structs.
 type Config struct {
 	// The original filename (basename)
 	FileName string
 
-	Name     string    `xml:"name,attr"`
-	Monitors []Monitor `xml:"monitor"`
+	Name    string
+	Monitor map[string]Monitor
+}
+
+// Runs a validation over the parsed configuration file. The returned
+// error is of type ValidationError.
+func (c *Config) Validate(basePath string) error {
+	verr := ValidationError{}
+
+	if strings.TrimSpace(c.Name) == "" {
+		verr.Add("Configuration file must have a 'name'")
+	}
+
+	for monitorName, monitor := range c.Monitor {
+		if monitor.Name == "" {
+			verr.Add(fmt.Sprintf("monitor '%s' must have a 'name' attribute", monitorName))
+		}
+		if monitor.Url == "" {
+			verr.Add(fmt.Sprintf("monitor '%s': must have a 'url' attribute", monitorName))
+		} else {
+			_, err := url.ParseRequestURI(monitor.Url)
+			if err != nil {
+				verr.Add(fmt.Sprintf("monitor '%s': malformed url (%s)", monitorName, err))
+			}
+		}
+
+		// validate headers, if applicable
+		for _, header := range monitor.Headers {
+			err := header.Validate()
+			if err != nil {
+				verr.Add(fmt.Sprintf("monitor '%s': malformed header spec: %s", monitorName, err))
+			}
+		}
+
+		// try to open the file which is to be sent
+		if monitor.File != "" {
+			f := path.Join(basePath, monitor.File)
+			_, err := os.Stat(f)
+			if err != nil {
+				verr.Add(fmt.Sprintf("monitor '%s': unable to use HTTP POST data: %s", monitorName, err))
+			}
+		}
+
+		for _, assertion := range monitor.Assertions {
+			_, err := regexp.Compile(assertion)
+			if err != nil {
+				verr.Add(fmt.Sprintf("monitor '%s': assertion '%s' has an invalid regex: %s", monitorName, assertion, err))
+			}
+		}
+	}
+
+	// if we found 0 or more errors, return the verr, else ...
+	if len(verr.ErrorList) > 0 {
+		return verr
+	}
+
+	// ... return a nil error
+	return nil
 }
 
 // Monitor node with its children. All slices can be zero or more,
 // technically, but logically some kind of validation can be done using
 // Validate().
 type Monitor struct {
-	Name        string                         `xml:"name,attr"`
-	Description string                         `xml:"desc,attr"`
-	Url         string                         `xml:"url"`
-	File        string                         `xml:"file"`
-	Timeout     int                            `xml:"timeout"`
-	Headers     []Header                       `xml:"headers>header"`
-	Assertions  []string                       `xml:"assertions>assertion"`
+	Name        string
+	Description string
+	Url         string
+	File        string
+	Timeout     int
+	Headers     []Header
+	Assertions  []string
 	Callback    func(*Monitor, []byte, []byte) `json:"-"` // callback function to check input/output
 }
 
-// Extra HTTP headers to send.
-type Header struct {
-	Name  string `xml:"name,attr"`
-	Value string `xml:"value,attr"`
-}
-
+// notifyCallback will report the input and output when hmon is run in verbose mode.
 func (m *Monitor) notifyCallback(input, output []byte) {
 	if m.Callback != nil {
 		m.Callback(m, input, output)
 	}
 }
 
-// Runs a check for the given Monitor. There are a few things done in this function.
+// Run runs a check for the given Monitor. There are a few things done in this function.
 // If the given input file is empty (i.e. none), a http GET is issued to the given URL.
 // If a file is given though, this will become a http POST, with the post-data being the
 // file's contents. If there are any assertions configured, all the assertions are used
 // to test the content. If none are configured, it will just be a sort of 'ping-check',
 // i.e. checking if a connection could be made to the URL.
-//
 func (m Monitor) Run(baseDir string, c chan Result) {
 	client := http.Client{}
 
@@ -125,9 +188,11 @@ func (m Monitor) Run(baseDir string, c chan Result) {
 		return
 	}
 
-	// add all optional headers:
-	for i := range m.Headers {
-		req.Header.Add(m.Headers[i].Name, m.Headers[i].Value)
+	// add all optional headers. This uses the GetName() and GetValue on our Header
+	// type. By this time, the validator should have validated the headers in the
+	// configuration, so correct headers are sent.
+	for _, header := range m.Headers {
+		req.Header.Set(header.GetName(), header.GetValue())
 	}
 
 	// start measuring time from this point:
@@ -152,7 +217,7 @@ func (m Monitor) Run(baseDir string, c chan Result) {
 	var timeout time.Duration
 	if m.Timeout <= 0 {
 		// if timeout is smaller/eq zero, use default timeout
-		timeout = time.Duration(TIMEOUT_DEFAULT) * time.Second
+		timeout = time.Duration(TimeoutDefault) * time.Second
 	} else {
 		timeout = time.Duration(int64(m.Timeout)) * time.Millisecond
 	}
@@ -203,58 +268,57 @@ func (m Monitor) Run(baseDir string, c chan Result) {
 
 // Returns the monitor as a string.
 func (m Monitor) String() string {
-	return fmt.Sprintf("%s (%s), %d headers, %d assertions", m.Name, m.Url, len(m.Headers), len(m.Assertions))
+	return fmt.Sprintf("Monitor '%s' to URL %s, %d headers, %d assertions", m.Name, m.Url, len(m.Headers), len(m.Assertions))
 }
 
-// Runs a validation over the parsed configuration file. The returned
-// error is of type ValidationError.
-func (c *Config) Validate() error {
-	verr := ValidationError{}
+// Header is a string type with a HTTP header in the form of "Header: value". The type defines
+// two methods to extract the name and the value from it.
+type Header string
 
-	if strings.TrimSpace(c.Name) == "" {
-		verr.Add("root node <hmonconfig> requires a non-empty 'name' attribute")
+// GetName finds the name of the header by splitting the header string on the colon character.
+func (h Header) GetName() string {
+	idx := strings.Index(string(h), ":")
+	if idx > 0 {
+		return string(h)[0:idx]
 	}
 
-	monitorNames := make(map[string]bool)
+	return ""
+}
 
-	for monidx, mon := range c.Monitors {
-		if mon.Name == "" {
-			verr.Add(fmt.Sprintf("monitor[%d]: requires a non-empty 'name' attribute", monidx))
-		} else {
-			// to ensure monitor name uniqueness, we're putting them in a map and check
-			// if it's already defined earlier.
-			if monitorNames[mon.Name] {
-				verr.Add(fmt.Sprintf("monitor[%d] with name '%s' is already defined", monidx, mon.Name))
-			} else {
-				monitorNames[mon.Name] = true
-			}
-		}
-
-		if mon.Url == "" {
-			verr.Add(fmt.Sprintf("monitor[%d]: empty url", monidx))
-		} else {
-			_, err := url.ParseRequestURI(mon.Url)
-			if err != nil {
-				verr.Add(fmt.Sprintf("monitor[%d]: malformed url: %s", monidx, err))
-			}
-		}
-
-		for assidx := range mon.Assertions {
-			_, err := regexp.Compile(mon.Assertions[assidx])
-			if err != nil {
-				verr.Add(fmt.Sprintf("monitor[%d]/assertion[%d]: invalid regex: %s", monidx, assidx, err))
-			}
-		}
+// GetValue finds the value of the header by splitting the header string on the colon character.
+// Returns an empty string when the length
+func (h Header) GetValue() string {
+	idx := strings.Index(string(h), ":")
+	if idx > 0 {
+		return strings.Trim(string(h)[idx+1:], " ")
 	}
 
-	// if we found 0 or more errors, return the verr, else ...
-	if len(verr.ErrorList) > 0 {
-		return verr
+	return ""
+}
+
+// Validate slightly validates if a header is correct. I'm not implementing the full spec here though.
+func (h Header) Validate() error {
+	idx := strings.Index(string(h), ":")
+	if idx < 0 {
+		return fmt.Errorf("invalid header '%s'", string(h))
 	}
 
-	// ... return a nil error
+	hname := string(h)[0:idx]
+	// lol, not sure if this is ok, but I'm currently too lazy to read the http header field name
+	// spec things. For now this is ok.
+	if strings.ContainsAny(hname, " ,.!=+@#$%^&*") {
+		return fmt.Errorf("invalid header name '%s'", hname)
+	}
+
+
 	return nil
 }
+
+/*
+ * ===============================================================================
+ * Functions not belonging to types
+ * ===============================================================================
+ */
 
 // Reads a single configuration file name. Returns a Config struct if OK,
 // or an error if anything has failed.
@@ -308,17 +372,13 @@ func FindConfigs(baseDir string) ([]Config, error) {
 	for _, fi := range finfos {
 		// only fetch files
 		if !fi.IsDir() {
-			if strings.HasSuffix(fi.Name(), "_hmon.xml") {
+			if strings.HasSuffix(fi.Name(), "_hmon.toml") {
 				fullFile := path.Join(baseDir, fi.Name())
-				contents, err := ioutil.ReadFile(fullFile)
-				if err != nil {
-					fmt.Println(err)
-					continue
-				}
 
 				c := Config{}
 				c.FileName = fi.Name()
-				err = xml.Unmarshal(contents, &c)
+
+				_, err := toml.DecodeFile(fullFile, &c)
 				if err != nil {
 					// when one or more config files can't be
 					// parsed, bail out!
@@ -335,7 +395,11 @@ func FindConfigs(baseDir string) ([]Config, error) {
 	return configurations, nil
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/*
+ * ===============================================================================
+ * Misc util structs.
+ * ===============================================================================
+ */
 
 // Type ConfigurationResult encapsulates a given configuration with the results
 // for that configuration.
@@ -347,8 +411,8 @@ type ConfigurationResult struct {
 // Type Result encapsulates information about a Monitor and its invocation result.
 type Result struct {
 	Monitor Monitor // the monitor which may or may not have failed.
-	Latency int64    // The latency of the call i.e. how long did it take (in ms)
-	Error   error    // An error, describing the possible failure. If nil, it's ok.
+	Latency int64   // The latency of the call i.e. how long did it take (in ms)
+	Error   error   // An error, describing the possible failure. If nil, it's ok.
 }
 
 // Returns the result as a string for some easy-peasy debuggin'.

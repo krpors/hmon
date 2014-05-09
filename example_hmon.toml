@@ -1,0 +1,32 @@
+name = "Common tests"
+
+[monitor.Github]
+name = "Github test"
+url = "https://status.github.com"
+desc = "Optional description"
+timeout = 30000
+assertions = [
+    "html"
+]
+
+[monitor.ZoWonen test]
+name = "Zowonen request"
+url = "http://zowonen.nl"
+timeout = 30000
+assertions = []
+
+[monitor.Should fail]
+name = "Example org"
+url = "http://example.org"
+timeout = 30000
+assertions = [
+    "blah not yadda"
+]
+
+[monitor.OMGWTFBBQ]
+name = "OMGWTFBBQ req"
+url = "http://omgwtfbbq.nl"
+timeout = 50000
+headers = [
+    "Stuff: something.else"
+]
