@@ -46,7 +46,7 @@ them. Example configuration file:
 		"Stuff: something.else"
 	]
 
-Each configuration file which is included in a run must have a unique 
+Each configuration file which is included in a run must have a unique
 top level name attribute.
 
 In each monitor node, you must specify a mandatory URL to send the request to
@@ -63,8 +63,8 @@ assertion fails, hmon will report an error for that monitor.
 Output
 
 Generally, all output is reported to stdout. Additionally, other output
-formats to file can be specified. Currently three different formats are 
-supported: JSON, CSV and PandoraFMS agent data. PandoraFMS (see 
+formats to file can be specified. Currently three different formats are
+supported: JSON, CSV and PandoraFMS agent data. PandoraFMS (see
 http://pandorafms.org) is a specialized output format in XML so the agent can
 interprete it, and display it in the Pandora Web console.
 
@@ -84,7 +84,7 @@ and validated, and are used to run all monitors within these files.
 
 	-filedir="."
 
-The base directory where all HTTP POST request data resides. The <file> 
+The base directory where all HTTP POST request data resides. The <file>
 node in the monitors will use this as base.
 
 	-format=""
@@ -107,7 +107,7 @@ means every monitor waits for execution until the previous monitor is done.
 Setting this flag is not recommended for monitor execution speed :)
 
 	-validate=false
-	
+
 Validate configuration file(s) only.
 
 	-verbose=false

@@ -310,7 +310,6 @@ func (h Header) Validate() error {
 		return fmt.Errorf("invalid header name '%s'", hname)
 	}
 
-
 	return nil
 }
 
