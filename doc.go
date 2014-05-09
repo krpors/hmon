@@ -1,54 +1,64 @@
 /*
 A simplistic HTTP monitoring tool, using content assertions.
 
-The idea is basically making a connection to one or multiple HTTP servers, issuing
-a request (GET or POST), and run assertions on the response. The result of each
-assertion is then returned, to check whether the response is in the expected format.
+The idea is basically making a connection to one or multiple HTTP servers,
+issuing a request (GET or POST), and run assertions on the response. The result
+of each assertion is then returned, to check whether the response is in the
+expected format.
 
 Configuration
 
-The configuration itself is stored in an XML file, which should end in _hmon.xml.
-Multiple configuration files can be created (must be in one directory). Hmon will
-then read all _hmon.xml files, parse them, and validate them. Example configuration
-file:
+The configuration itself is stored in a TOML file, which should end in
+_hmon.toml.  Multiple configuration files can be created (must be in one
+directory). Hmon will then read all _hmon.toml files, parse them, and validate
+them. Example configuration file:
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<hmonconfig name="Example tests">
-		<monitor name="Github.com">
-			<url>https://status.github.com</url>
-			<timeout>30000</timeout>
-			<assertions>
-				<assertion>GitHub System Status</assertion>
-			</assertions>
-		</monitor>
-		<monitor name="Some web API check">
-			<url>http://example.org/api</url>
-			<file>someSoapRequest-1.0.xml</file>
-			<timeout>30000</timeout>
-			<headers>
-				<header name="SOAPAction" value="http://soapaction"/>
-			</headers>
-			<assertions>
-				<assertion>some kind of assertion string</assertion>
-			</assertions>
-		</monitor>
-	</hmonconfig>
+	name = "Common tests"
+
+	[monitor.Github]
+	name = "Github test"
+	url = "https://status.github.com"
+	desc = "Optional description"
+	timeout = 30000
+	assertions = [
+		"html"
+	]
+
+	[monitor.ZoWonen test]
+	name = "Zowonen request"
+	url = "http://zowonen.nl"
+	timeout = 30000
+	assertions = []
+
+	[monitor.Should fail]
+	name = "Example org"
+	url = "http://example.org"
+	timeout = 30000
+	assertions = [
+		"blah not yadda"
+	]
+
+	[monitor.OMGWTFBBQ]
+	name = "OMGWTFBBQ req"
+	url = "http://omgwtfbbq.nl"
+	timeout = 50000
+	headers = [
+		"Stuff: something.else"
+	]
 
 Each configuration file which is included in a run must have a unique 
-hmonconfig/@name attribute. Furthermore, in a single configuration file,
-the hmonconfig/monitor/@name attribute must also be unique. No worries though,
-because the validate step should report any errors regarding uniqueness.
+top level name attribute.
 
-In each monitor node, you can specify the URL to send the request to using the
-element <url>. If a <file> element is specified, the contents
-of that specific file will be sent as HTTP POST data. Note that if the file is
-NOT specified, a HTTP GET will be used instead. This may change in the future.
-Using <timeout>, an optional timeout can be given, in milliseconds. If this 
-node is not specified, the default value of 60 seconds is used. With <headers>
-and its child elements <header>, custom HTTP headers can be sent. Think of Base64
-authentication, or a SOAP action. Lastly, the <assertion> elements can be used
-to specify regular expressions. The response is asserted against each of these
-regexes. If one fails, hmon will report an error for that monitor.
+In each monitor node, you must specify a mandatory URL to send the request to
+using the attribute 'url'. If a <file> element is specified, the contents of
+that specific file will be sent as HTTP POST data. Note that if the file is NOT
+specified, a HTTP GET will be used instead. This may change in the future.
+Using 'timeout', an optional timeout can be given, in milliseconds. If this
+attribute is not specified, the default value of 60 seconds is used. With
+'headers' custom HTTP headers can be sent. Think of Base64 authentication, or a
+SOAP action.  Lastly, the 'assertions' attribute can be used to specify regular
+expressions. The response is asserted against each of these regexes. If an
+assertion fails, hmon will report an error for that monitor.
 
 Output
 
@@ -61,12 +71,6 @@ interprete it, and display it in the Pandora Web console.
 Usable flags
 
 The following flags can be used (defaults after the = sign):
-
-	-combine=false
-
-This will combine all single <monitor>s from all found configuration file.
-In short, this mimics as if the x amount of configuration files are all
-specified in one.
 
 	-conf=""
 
