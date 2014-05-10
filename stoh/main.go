@@ -56,6 +56,7 @@ func (this Project) Print(writer io.Writer) {
 				fmt.Fprintf(writer, "\t\tOperation:   %s\n", ts.Operation)
 				fmt.Fprintf(writer, "\t\tBinding:     %s\n", ts.Binding)
 				fmt.Fprintf(writer, "\t\tReq len:     %d\n", len(ts.Request))
+				fmt.Fprintf(writer, "\t\tSOAPAction:  %s\n", this.FindSoapAction(ts.Binding, ts.Operation))
 				fmt.Fprintf(writer, "\t\tAssertions:  %d\n", len(ts.Assertion))
 				fmt.Fprintf(writer, "\t\t (valid):    %d\n", len(ts.GetAssertions()))
 				fmt.Fprintln(writer)
