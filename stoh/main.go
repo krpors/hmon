@@ -3,7 +3,9 @@ package main
 import (
 	"encoding/xml"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"os"
 )
 
 /*
@@ -31,6 +33,34 @@ soapui-project
 type Project struct {
 	TestSuite []TestSuite `xml:"testSuite"`
 	Interface []Interface `xml:"interface"` // all deffed interfaces
+}
+
+// Print prints out the full project to the given writer in a
+// structured view.
+func (this Project) Print(writer io.Writer) {
+	for _, i := range this.Interface {
+		fmt.Fprintf(writer, "Interface '%s'\n", i.Name)
+		for _, x := range i.Operation {
+			fmt.Fprintf(writer, "\tOperation name:  %s\n", x.Name)
+			fmt.Fprintf(writer, "\tSOAP Action:     %s\n\n", x.SoapAction)
+		}
+	}
+
+	for _, s := range this.TestSuite {
+		fmt.Fprintf(writer, "Testsuite '%s'\n", s.Name)
+		for _, t := range s.TestCase {
+			fmt.Printf("\tTestcase '%s'\n", t.Name)
+			for _, ts := range t.TestStep {
+				fmt.Fprintf(writer, "\t\tName:        %s\n", ts.Name)
+				fmt.Fprintf(writer, "\t\tEndpoint:    %s\n", ts.Endpoint)
+				fmt.Fprintf(writer, "\t\tOperation:   %s\n", ts.Operation)
+				fmt.Fprintf(writer, "\t\tBinding:     %s\n", ts.Binding)
+				fmt.Fprintf(writer, "\t\tReq len:     %d\n", len(ts.Request))
+				fmt.Fprintf(writer, "\t\tAssertions:  %d\n", len(ts.Assertion))
+				fmt.Fprintln(writer)
+			}
+		}
+	}
 }
 
 func (this Project) FindSoapAction(bindingName, operationName string) string {
@@ -80,7 +110,7 @@ type TestStep struct {
 // in the simple "Contains" assertions, since hmon can only assert against those.
 // Well, also regular expressions, but thats a TODO.
 func (this TestStep) GetAssertions() []string {
-	var	validAssertions []string
+	var validAssertions []string
 
 	for _, ass := range this.Assertion {
 		if ass.Type == "Simple Contains" {
@@ -90,38 +120,9 @@ func (this TestStep) GetAssertions() []string {
 	return validAssertions
 }
 
-
 type Assertion struct {
 	Type  string `xml:"type"`
 	Token string `xml:"configuration>token"`
-}
-
-// PrintStructure prints the (assumed) SoapUI project file given in 'file', to
-// the standard output.
-func PrintStructure(p Project) {
-	for _, i := range p.Interface {
-		fmt.Println("Interface: ", i.Name)
-		for _, x := range i.Operation {
-			fmt.Printf("\tOpname: %s\n", x.Name)
-			fmt.Printf("\tAction: %s\n\n", x.SoapAction)
-		}
-	}
-
-	for _, s := range p.TestSuite {
-		fmt.Println(s.Name)
-		for _, t := range s.TestCase {
-			fmt.Println("\t", t.Name)
-			for _, ts := range t.TestStep {
-				fmt.Printf("\t\tName:        %s\n", ts.Name)
-				fmt.Printf("\t\tEndpoint:    %s\n", ts.Endpoint)
-				fmt.Printf("\t\tOperation:   %s\n", ts.Operation)
-				fmt.Printf("\t\tBinding:     %s\n", ts.Binding)
-				fmt.Printf("\t\tReq len:     %d\n", len(ts.Request))
-				fmt.Printf("\t\tAssertions:  %d\n", len(ts.Assertion))
-				fmt.Println()
-			}
-		}
-	}
 }
 
 func ParseFile(file string) (Project, error) {
@@ -147,5 +148,5 @@ func main() {
 		return
 	}
 
-	PrintStructure(project)
+	project.Print(os.Stdout)
 }
