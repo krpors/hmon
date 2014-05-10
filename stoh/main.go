@@ -108,7 +108,7 @@ type TestStep struct {
 	Endpoint  string      `xml:"config>request>endpoint"`
 	Request   string      `xml:"config>request>request"`
 	Binding   string      `xml:"config>interface"`
-	Operation string      `xml:"config>operation"` // TODO crossref operation/binding with con:interface to get the correct soapaction
+	Operation string      `xml:"config>operation"`
 	Assertion []Assertion `xml:"config>request>assertion"`
 }
 
@@ -150,6 +150,31 @@ func ParseFile(file string) (Project, error) {
 	return p, nil
 }
 
+func process(p Project, w io.Writer) {
+	for _, s := range p.TestSuite {
+		fmt.Fprintf(w, "name = \"%s\"\n\n", s.Name)
+		for _, c := range s.TestCase {
+			for _, step := range c.TestStep {
+				fmt.Fprintf(w, "[monitor.%s]\n", step.Name)
+				fmt.Fprintf(w, "name = \"%s\"\n", step.Name)
+				fmt.Fprintf(w, "file = \"todo\"\n")
+				fmt.Fprintf(w, "url = \"%s\"\n", step.Endpoint)
+				fmt.Fprintf(w, "headers = [\n")
+				fmt.Fprintf(w, "  \"SOAPAction: %s\",\n", p.FindSoapAction(step.Binding, step.Operation))
+				fmt.Fprintf(w, "  \"Content-Type: %s\"\n", "application/soap+xml")
+				fmt.Fprintf(w, "]\n")
+				fmt.Fprintf(w, "assertions = [\n")
+				for _, ass := range step.GetAssertions() {
+					fmt.Fprintf(w, "  \"%s\",\n", ass)
+				}
+				fmt.Fprintf(w, "]\n")
+
+				fmt.Fprintln(w)
+			}
+		}
+	}
+}
+
 func main() {
 	project, err := ParseFile("Demo-soapui-project.xml")
 	if err != nil {
@@ -157,5 +182,7 @@ func main() {
 		return
 	}
 
-	project.Print(os.Stdout)
+	//project.Print(os.Stdout)
+
+	process(project, os.Stdout)
 }
