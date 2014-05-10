@@ -31,8 +31,8 @@ soapui-project
 */
 
 type Project struct {
-	TestSuite []TestSuite `xml:"testSuite"`
 	Interface []Interface `xml:"interface"` // all deffed interfaces
+	TestSuite []TestSuite `xml:"testSuite"`
 }
 
 // Print prints out the full project to the given writer in a
@@ -57,12 +57,18 @@ func (this Project) Print(writer io.Writer) {
 				fmt.Fprintf(writer, "\t\tBinding:     %s\n", ts.Binding)
 				fmt.Fprintf(writer, "\t\tReq len:     %d\n", len(ts.Request))
 				fmt.Fprintf(writer, "\t\tAssertions:  %d\n", len(ts.Assertion))
+				fmt.Fprintf(writer, "\t\t (valid):    %d\n", len(ts.GetAssertions()))
 				fmt.Fprintln(writer)
 			}
 		}
 	}
 }
 
+// FindSoapAction iterates through the interfaces and its operations to
+// find the correct SOAPAction belonging to the binding name and operation
+// name. This function is used to get the correct SOAP Action when processing
+// testsuites/cases, since the SOAP action cannot be retrieved reliably from
+// those elements and descendants.
 func (this Project) FindSoapAction(bindingName, operationName string) string {
 	for _, interf := range this.Interface {
 		if interf.Name == bindingName {
@@ -121,10 +127,12 @@ func (this TestStep) GetAssertions() []string {
 }
 
 type Assertion struct {
-	Type  string `xml:"type"`
+	Type  string `xml:"type,attr"`
 	Token string `xml:"configuration>token"`
 }
 
+// ParseFile parses the given file to a Project struct. Will return
+// an error if anything failed.
 func ParseFile(file string) (Project, error) {
 	p := Project{}
 
