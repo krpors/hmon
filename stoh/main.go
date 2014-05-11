@@ -6,28 +6,32 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 )
 
 /*
+A SoapUI project has the following structure (only the elements
+we're interested in are given):
+
 soapui-project
-	interface* (@name = de binding)
-		operation* (@action = soapaction voor deze binding
+	interface* (@name = binding name)
+		operation* (@action = soapaction for this binding)
 					@bindingOperationName = operation name)
 	testSuite* (@name)
 		testCase*
 			testStep* (@name)
 				config
-					interace = de endpoint binding
-					operatoin = de operation van de binding
-					request (@name, bijv. Authenticate)
-						endpoint (url hierin)
-						request (cdata content met request)
-						assertion @type ("Simple NotContains",  "Not Contains")
+					interface = the endpoint binding
+					operation = the operation of the binding
+					request (@name)
+						endpoint (endpoint URL)
+						request (cdata content with request)
+						assertion @type ("Simple NotContains",  "Not Contains", "Simple Contains")
 							configuration
-								token ( "Error" )
+								token ("Error")
 								ignoreCase bool
 								useRegEx bool
-						wsaConfig (@action)
+						wsaConfig (@action, unreliable)
 */
 
 type Project struct {
@@ -35,7 +39,7 @@ type Project struct {
 	TestSuite []TestSuite `xml:"testSuite"`
 }
 
-// Print prints out the full project to the given writer in a
+// Print prints out the full project to the given writer, in a
 // structured view.
 func (this Project) Print(writer io.Writer) {
 	for _, i := range this.Interface {
@@ -152,37 +156,59 @@ func ParseFile(file string) (Project, error) {
 
 func process(p Project, w io.Writer) {
 	for _, s := range p.TestSuite {
-		fmt.Fprintf(w, "name = \"%s\"\n\n", s.Name)
+		err := os.MkdirAll(s.Name, 0775)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Can't create directory: %s\n",  err)
+			os.Exit(2)
+		}
+
+		outfile, err := os.Create(path.Join(s.Name, "lol.toml"))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Can't create file: %s\n",  err)
+			os.Exit(2)
+		}
+
+		fmt.Fprintf(outfile, "name = \"%s\"\n\n", s.Name)
 		for _, c := range s.TestCase {
 			for _, step := range c.TestStep {
-				fmt.Fprintf(w, "[monitor.%s]\n", step.Name)
-				fmt.Fprintf(w, "name = \"%s\"\n", step.Name)
-				fmt.Fprintf(w, "file = \"todo\"\n")
-				fmt.Fprintf(w, "url = \"%s\"\n", step.Endpoint)
-				fmt.Fprintf(w, "headers = [\n")
-				fmt.Fprintf(w, "  \"SOAPAction: %s\",\n", p.FindSoapAction(step.Binding, step.Operation))
-				fmt.Fprintf(w, "  \"Content-Type: %s\"\n", "application/soap+xml")
-				fmt.Fprintf(w, "]\n")
-				fmt.Fprintf(w, "assertions = [\n")
-				for _, ass := range step.GetAssertions() {
-					fmt.Fprintf(w, "  \"%s\",\n", ass)
+				lolzor, err := os.Create(path.Join(s.Name, fmt.Sprintf("%s.xml", step.Name)))
+				if err != nil {
+					os.Exit(2)
 				}
-				fmt.Fprintf(w, "]\n")
+				fmt.Fprintf(lolzor, step.Request)
+				lolzor.Close()
 
-				fmt.Fprintln(w)
+				fmt.Fprintf(outfile, "[monitor.%s]\n", step.Name)
+				fmt.Fprintf(outfile, "name = \"%s\"\n", step.Name)
+				fmt.Fprintf(outfile, "file = \"%s.xml\"\n", step.Name)
+				fmt.Fprintf(outfile, "url = \"%s\"\n", step.Endpoint)
+				fmt.Fprintf(outfile, "headers = [\n")
+				fmt.Fprintf(outfile, "  \"SOAPAction: %s\",\n", p.FindSoapAction(step.Binding, step.Operation))
+				fmt.Fprintf(outfile, "  \"Content-Type: %s\"\n", "application/soap+xml")
+				fmt.Fprintf(outfile, "]\n")
+				fmt.Fprintf(outfile, "assertions = [\n")
+				for _, ass := range step.GetAssertions() {
+					fmt.Fprintf(outfile, "  \"%s\",\n", ass)
+				}
+				fmt.Fprintf(outfile, "]\n")
+
+				fmt.Fprintln(outfile)
 			}
 		}
 	}
 }
 
 func main() {
-	project, err := ParseFile("Demo-soapui-project.xml")
-	if err != nil {
-		fmt.Println(err)
-		return
+	if len(os.Args) < 2 {
+		fmt.Fprintf(os.Stderr, "Expecting one argument (SoapUI project file with a testsuite)\n")
+		os.Exit(1)
 	}
 
-	//project.Print(os.Stdout)
+	project, err := ParseFile(os.Args[1])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Can't parse project file: %s\n", err)
+		os.Exit(1)
+	}
 
 	process(project, os.Stdout)
 }
