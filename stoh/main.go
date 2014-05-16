@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 )
 
 /*
@@ -131,6 +132,10 @@ func (this TestStep) GetAssertions() []string {
 	return validAssertions
 }
 
+func (this TestStep) GetSanitizedName() string {
+	return strings.Replace(this.Name, ".", "", -1)
+}
+
 type Assertion struct {
 	Type  string `xml:"type,attr"`
 	Token string `xml:"configuration>token"`
@@ -154,33 +159,50 @@ func ParseFile(file string) (Project, error) {
 	return p, nil
 }
 
-func process(p Project, w io.Writer) {
-	for _, s := range p.TestSuite {
-		err := os.MkdirAll(s.Name, 0775)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Can't create directory: %s\n",  err)
-			os.Exit(2)
-		}
+// MustCreateDir creates a directory or exits the program.
+func MustCreateDir(dir string) {
+	err := os.MkdirAll(dir, 0755)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to create directory: %s\n", err)
+		os.Exit(2)
+	}
+}
 
-		outfile, err := os.Create(path.Join(s.Name, "lol.toml"))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Can't create file: %s\n",  err)
-			os.Exit(2)
-		}
+func MustCreateFile(file string) *os.File {
+	outfile, err := os.Create(file)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to create file: %s\n", err)
+		os.Exit(2)
+	}
+
+	return outfile
+}
+
+func Process(p Project, w io.Writer) {
+	basedir := "_generated"
+	configsdir := path.Join(basedir, "configs")
+	postdatadir := path.Join(basedir, "postdata")
+
+	MustCreateDir(configsdir)
+	MustCreateDir(postdatadir)
+
+	for _, s := range p.TestSuite {
+		outfile := MustCreateFile(path.Join(configsdir, s.Name + "_hmon.toml"))
+
+		testsuitePostdataDir := path.Join(postdatadir, s.Name)
+		MustCreateDir(testsuitePostdataDir)
 
 		fmt.Fprintf(outfile, "name = \"%s\"\n\n", s.Name)
 		for _, c := range s.TestCase {
 			for _, step := range c.TestStep {
-				lolzor, err := os.Create(path.Join(s.Name, fmt.Sprintf("%s.xml", step.Name)))
-				if err != nil {
-					os.Exit(2)
-				}
-				fmt.Fprintf(lolzor, step.Request)
-				lolzor.Close()
+				// write the request file
+				postDataFile := MustCreateFile(path.Join(testsuitePostdataDir, step.Name+".xml"))
+				fmt.Fprintf(postDataFile, step.Request)
+				postDataFile.Close()
 
-				fmt.Fprintf(outfile, "[monitor.%s]\n", step.Name)
+				fmt.Fprintf(outfile, "[monitor.%s]\n", step.GetSanitizedName())
 				fmt.Fprintf(outfile, "name = \"%s\"\n", step.Name)
-				fmt.Fprintf(outfile, "file = \"%s.xml\"\n", step.Name)
+				fmt.Fprintf(outfile, "file = \"postdata/%s/%s.xml\"\n", s.Name, step.Name)
 				fmt.Fprintf(outfile, "url = \"%s\"\n", step.Endpoint)
 				fmt.Fprintf(outfile, "headers = [\n")
 				fmt.Fprintf(outfile, "  \"SOAPAction: %s\",\n", p.FindSoapAction(step.Binding, step.Operation))
@@ -210,5 +232,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	process(project, os.Stdout)
+	Process(project, os.Stdout)
 }
