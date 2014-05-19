@@ -24,27 +24,28 @@ const TimeoutDefault int = 60
  * ===============================================================================
  */
 
-// ValidationError, used to return when validation fails.
+// ValidationError is used to return validation errors when validation fails. It
+// simply contains a list of errors as a string slice.
 type ValidationError struct {
 	// Just an error list with all validation errors.
 	ErrorList []string
 }
 
-// Simply appends the string to the stack
+// Add simply appends the string to the stack.
 func (e *ValidationError) Add(s string) {
 	e.ErrorList = append(e.ErrorList, s)
 }
 
 // Returns a summary of the errors as a one-liner.
 func (e ValidationError) Error() string {
-	var plural string = "error"
+	plural := "error"
 	if len(e.ErrorList) > 1 {
 		plural = "errors"
 	}
 	return fmt.Sprintf("%d config validation %s found", len(e.ErrorList), plural)
 }
 
-// This type implements the error and json.Marshaler interface. It's a sort of wrapper
+// ResultError is a typ which implements the error and json.Marshaler interface. It's a sort of wrapper
 // around the error type, so an error can be marshaled to JSON (i.e. the error description).
 type ResultError struct {
 	Err error // the encapsulated error
@@ -55,7 +56,7 @@ func (r ResultError) Error() string {
 	return fmt.Sprintf("%v", r.Err)
 }
 
-// The function from interface json.Marshaler. Empty descriptions result in a null JSON object.
+// MarshalJSON implements the interface json.Marshaler. Empty descriptions result in a null JSON object.
 // Non empty descriptions are just simply marshaled.
 func (r ResultError) MarshalJSON() ([]byte, error) {
 	if r.Err == nil {
@@ -70,8 +71,7 @@ func (r ResultError) MarshalJSON() ([]byte, error) {
  * ===============================================================================
  */
 
-// Root configuration node, contains zero or more Monitor
-// structs.
+// Config is the root configuration node, contains zero or more Monitor structs.
 type Config struct {
 	// The original filename (basename)
 	FileName string
@@ -80,7 +80,7 @@ type Config struct {
 	Monitor map[string]Monitor
 }
 
-// Runs a validation over the parsed configuration file. The returned
+// Validate runs a validation over the parsed configuration file. The returned
 // error is of type ValidationError.
 func (c *Config) Validate(basePath string) error {
 	verr := ValidationError{}
@@ -93,10 +93,10 @@ func (c *Config) Validate(basePath string) error {
 		if monitor.Name == "" {
 			verr.Add(fmt.Sprintf("monitor '%s' must have a 'name' attribute", monitorName))
 		}
-		if monitor.Url == "" {
+		if monitor.URL == "" {
 			verr.Add(fmt.Sprintf("monitor '%s': must have a 'url' attribute", monitorName))
 		} else {
-			_, err := url.ParseRequestURI(monitor.Url)
+			_, err := url.ParseRequestURI(monitor.URL)
 			if err != nil {
 				verr.Add(fmt.Sprintf("monitor '%s': malformed url (%s)", monitorName, err))
 			}
@@ -142,7 +142,7 @@ func (c *Config) Validate(basePath string) error {
 type Monitor struct {
 	Name        string
 	Description string
-	Url         string
+	URL         string
 	File        string
 	Timeout     int
 	Headers     []Header
@@ -171,7 +171,7 @@ func (m Monitor) Run(baseDir string, c chan Result) {
 	var err error
 
 	if m.File == "" {
-		req, err = http.NewRequest("GET", m.Url, nil)
+		req, err = http.NewRequest("GET", m.URL, nil)
 	} else {
 		requestBody, err = ioutil.ReadFile(path.Join(baseDir, m.File))
 		if err != nil {
@@ -179,7 +179,7 @@ func (m Monitor) Run(baseDir string, c chan Result) {
 			c <- Result{m, 0, ResultError{err}}
 			return
 		}
-		req, err = http.NewRequest("POST", m.Url, bytes.NewReader(requestBody))
+		req, err = http.NewRequest("POST", m.URL, bytes.NewReader(requestBody))
 	}
 
 	if err != nil {
@@ -268,7 +268,7 @@ func (m Monitor) Run(baseDir string, c chan Result) {
 
 // Returns the monitor as a string.
 func (m Monitor) String() string {
-	return fmt.Sprintf("Monitor '%s' to URL %s, %d headers, %d assertions", m.Name, m.Url, len(m.Headers), len(m.Assertions))
+	return fmt.Sprintf("Monitor '%s' to URL %s, %d headers, %d assertions", m.Name, m.URL, len(m.Headers), len(m.Assertions))
 }
 
 // Header is a string type with a HTTP header in the form of "Header: value". The type defines
@@ -319,7 +319,7 @@ func (h Header) Validate() error {
  * ===============================================================================
  */
 
-// Reads a single configuration file name. Returns a Config struct if OK,
+// ReadConfig reads a single toml configuration file name. Returns a Config struct if OK,
 // or an error if anything has failed.
 func ReadConfig(file string) (Config, error) {
 	f, err := os.Open(file)
@@ -347,9 +347,8 @@ func ReadConfig(file string) (Config, error) {
 	return c, nil
 }
 
-// Using a base directory, finds all configuration XML files and parses them.
-// A slice of Configs are returned. Obviously, if the slice length is zero,
-// and the error is non-nil, no configurations are found.
+// FindConfigs find all toml configuration files using a base directory. A slice of Config
+// are returned. If the slice length is zero, and the error is non-nil, no configurations are found.
 func FindConfigs(baseDir string) ([]Config, error) {
 	dir, err := os.Open(baseDir)
 	if err != nil {
@@ -400,14 +399,14 @@ func FindConfigs(baseDir string) ([]Config, error) {
  * ===============================================================================
  */
 
-// Type ConfigurationResult encapsulates a given configuration with the results
+// ConfigurationResult encapsulates a given configuration with the results
 // for that configuration.
 type ConfigurationResult struct {
 	ConfigurationName string   // the identifiable name of the configuration
 	Results           []Result // the results for this configuration
 }
 
-// Type Result encapsulates information about a Monitor and its invocation result.
+// Result encapsulates information about a Monitor and its invocation result.
 type Result struct {
 	Monitor Monitor // the monitor which may or may not have failed.
 	Latency int64   // The latency of the call i.e. how long did it take (in ms)

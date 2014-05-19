@@ -35,6 +35,7 @@ soapui-project
 						wsaConfig (@action, unreliable)
 */
 
+// Project is the root node of a SoapUI project.
 type Project struct {
 	Interface []Interface `xml:"interface"` // all deffed interfaces
 	TestSuite []TestSuite `xml:"testSuite"`
@@ -42,8 +43,8 @@ type Project struct {
 
 // Print prints out the full project to the given writer, in a
 // structured view.
-func (this Project) Print(writer io.Writer) {
-	for _, i := range this.Interface {
+func (p Project) Print(writer io.Writer) {
+	for _, i := range p.Interface {
 		fmt.Fprintf(writer, "Interface '%s'\n", i.Name)
 		for _, x := range i.Operation {
 			fmt.Fprintf(writer, "\tOperation name:  %s\n", x.Name)
@@ -51,7 +52,7 @@ func (this Project) Print(writer io.Writer) {
 		}
 	}
 
-	for _, s := range this.TestSuite {
+	for _, s := range p.TestSuite {
 		fmt.Fprintf(writer, "Testsuite '%s'\n", s.Name)
 		for _, t := range s.TestCase {
 			fmt.Printf("\tTestcase '%s'\n", t.Name)
@@ -61,7 +62,7 @@ func (this Project) Print(writer io.Writer) {
 				fmt.Fprintf(writer, "\t\tOperation:   %s\n", ts.Operation)
 				fmt.Fprintf(writer, "\t\tBinding:     %s\n", ts.Binding)
 				fmt.Fprintf(writer, "\t\tReq len:     %d\n", len(ts.Request))
-				fmt.Fprintf(writer, "\t\tSOAPAction:  %s\n", this.FindSoapAction(ts.Binding, ts.Operation))
+				fmt.Fprintf(writer, "\t\tSOAPAction:  %s\n", p.FindSoapAction(ts.Binding, ts.Operation))
 				fmt.Fprintf(writer, "\t\tAssertions:  %d\n", len(ts.Assertion))
 				fmt.Fprintf(writer, "\t\t (valid):    %d\n", len(ts.GetAssertions()))
 				fmt.Fprintln(writer)
@@ -75,8 +76,8 @@ func (this Project) Print(writer io.Writer) {
 // name. This function is used to get the correct SOAP Action when processing
 // testsuites/cases, since the SOAP action cannot be retrieved reliably from
 // those elements and descendants.
-func (this Project) FindSoapAction(bindingName, operationName string) string {
-	for _, interf := range this.Interface {
+func (p Project) FindSoapAction(bindingName, operationName string) string {
+	for _, interf := range p.Interface {
 		if interf.Name == bindingName {
 			for _, operation := range interf.Operation {
 				if operation.Name == operationName {
@@ -88,26 +89,31 @@ func (this Project) FindSoapAction(bindingName, operationName string) string {
 	return ""
 }
 
+// Interface is a repeating element in the Project rootnode.
 type Interface struct {
 	Name      string      `xml:"name,attr"` // the binding name
 	Operation []Operation `xml:"operation"` // operations per binding
 }
 
+// Operation is a repeating element in the Project rootnode.
 type Operation struct {
 	Name       string `xml:"name,attr"`   // op name
 	SoapAction string `xml:"action,attr"` // soapaction for op
 }
 
+// TestSuite contains SoapUI testcases.
 type TestSuite struct {
 	Name     string     `xml:"name,attr"`
 	TestCase []TestCase `xml:"testCase"`
 }
 
+// TestCase contains SoapUI test steps.
 type TestCase struct {
 	Name     string     `xml:"name,attr"`
 	TestStep []TestStep `xml:"testStep"`
 }
 
+// TestStep contains information about teststeps within a testcase.
 type TestStep struct {
 	Name      string      `xml:"name,attr"`
 	Endpoint  string      `xml:"config>request>endpoint"`
@@ -121,10 +127,10 @@ type TestStep struct {
 // several types of assertions (like Groovy scripts etc.) but we're only interested
 // in the simple "Contains" assertions, since hmon can only assert against those.
 // Well, also regular expressions, but thats a TODO.
-func (this TestStep) GetAssertions() []string {
+func (ts TestStep) GetAssertions() []string {
 	var validAssertions []string
 
-	for _, ass := range this.Assertion {
+	for _, ass := range ts.Assertion {
 		if ass.Type == "Simple Contains" {
 			validAssertions = append(validAssertions, ass.Token)
 		}
@@ -132,10 +138,15 @@ func (this TestStep) GetAssertions() []string {
 	return validAssertions
 }
 
-func (this TestStep) GetSanitizedName() string {
-	return strings.Replace(this.Name, ".", "", -1)
+// GetSanitizedName sanitizes the name of a teststep so it can be used in the resulting
+// toml configuration file. The current toml parser from BurntSushi does not accept periods
+// in the name of map entries (e.g. [monitor.Blah.1.0] is invalid). Currently, the periods
+// are replaced with an empty string.
+func (ts TestStep) GetSanitizedName() string {
+	return strings.Replace(ts.Name, ".", "", -1)
 }
 
+// Assertion contains information about the teststep's assertions.
 type Assertion struct {
 	Type  string `xml:"type,attr"`
 	Token string `xml:"configuration>token"`
@@ -159,7 +170,8 @@ func ParseFile(file string) (Project, error) {
 	return p, nil
 }
 
-// MustCreateDir creates a directory or exits the program.
+// MustCreateDir creates a directory denoted by the dir argument. If the directory
+// cannot be created, an error is printed to stderr, and the program will exit.
 func MustCreateDir(dir string) {
 	err := os.MkdirAll(dir, 0755)
 	if err != nil {
@@ -168,6 +180,8 @@ func MustCreateDir(dir string) {
 	}
 }
 
+// MustCreateFile creates an empty file denoted by the file argument and returns it.
+// If the file cannot be created, an error is printed to stderr and will exit.
 func MustCreateFile(file string) *os.File {
 	outfile, err := os.Create(file)
 	if err != nil {
@@ -178,7 +192,9 @@ func MustCreateFile(file string) *os.File {
 	return outfile
 }
 
-func Process(p Project, w io.Writer) {
+// Process processes the given project and writes the generated output to the
+// (current) fixed '_generated' directory.
+func Process(p Project) {
 	basedir := "_generated"
 	configsdir := path.Join(basedir, "configs")
 	postdatadir := path.Join(basedir, "postdata")

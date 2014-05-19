@@ -6,7 +6,6 @@ import (
 	"encoding/xml"
 	"flag"
 	"fmt"
-	"github.com/BurntSushi/toml"
 	"io/ioutil"
 	"os"
 	"path"
@@ -41,8 +40,8 @@ func validateConfigurations(configurations *[]Config) {
 	}
 
 	// boolean indicating that configurations are not valid.
-	var success bool = true
-	var totalerrs int8 = 0
+	success := true
+	var totalerrs int8
 
 	// first, check for failures in monitors inside a each configuration
 	for _, c := range *configurations {
@@ -105,15 +104,15 @@ func writeDefault(filename string, r *[]ConfigurationResult) error {
 
 // Writes the slice of results to the given filename as Json.
 // Any error will exit the program with exitcode 1.
-func writeJson(filename string, r *[]ConfigurationResult) error {
+func writeJSON(filename string, r *[]ConfigurationResult) error {
 	b, err := json.MarshalIndent(r, "  ", "  ")
 	if err != nil {
-		return fmt.Errorf("Error marshaling json: %s", err)
+		return fmt.Errorf("error marshaling json: %s", err)
 	}
 
 	err = ioutil.WriteFile(filename, b, 0644)
 	if err != nil {
-		return fmt.Errorf("Unable to write to file `%s': %s\n", filename, err)
+		return fmt.Errorf("unable to write to file `%s': %s\n", filename, err)
 	}
 
 	return nil
@@ -125,14 +124,14 @@ func writeCsv(filename string, results *[]ConfigurationResult) error {
 	f, err := os.Create(filename)
 
 	if err != nil {
-		return fmt.Errorf("Unable to open file for writing `%s': %s\n", filename, err)
+		return fmt.Errorf("unable to open file for writing `%s': %s\n", filename, err)
 	}
 
 	w := csv.NewWriter(f)
 
 	for _, r := range *results {
 		for _, res := range r.Results {
-			var status string = "FAIL"
+			status := "FAIL"
 			if res.Error == nil {
 				status = "OK"
 			}
@@ -140,7 +139,7 @@ func writeCsv(filename string, results *[]ConfigurationResult) error {
 			record := []string{
 				status,
 				res.Monitor.Name,
-				res.Monitor.Url,
+				res.Monitor.URL,
 				strconv.FormatInt(res.Latency, 10),
 			}
 			w.Write(record)
@@ -198,6 +197,7 @@ func writePandoraAgents(outdir string, results *[]ConfigurationResult) error {
 	return nil
 }
 
+// PfmsAgent is the root node when serializing PandoraFMS agent data.
 type PfmsAgent struct {
 	XMLName   struct{}     `xml:"agent_data"`
 	AgentName string       `xml:"agent_name,attr"`
@@ -205,6 +205,7 @@ type PfmsAgent struct {
 	Modules   []PfmsModule `xml:"module"`
 }
 
+// PfmsModule contains information about a single module for PandoraFMS.
 type PfmsModule struct {
 	Name        string `xml:"name"`
 	Type        string `xml:"type"`
@@ -272,9 +273,9 @@ func runParallel(filedir string, config Config, verbose bool) ConfigurationResul
 
 // Prints a short execution summary using all the results gathered.
 func printExecutionSummary(configResults []ConfigurationResult) {
-	var total int = 0
-	var countOk int = 0
-	var countFail int = 0
+	var total int
+	var countOk int
+	var countFail int
 
 	for _, cr := range configResults {
 		for _, res := range cr.Results {
@@ -292,28 +293,6 @@ func printExecutionSummary(configResults []ConfigurationResult) {
 	fmt.Printf("Successes: %d\n", countOk)
 	fmt.Printf("Failures:  %d\n", countFail)
 
-}
-
-type C struct {
-	Name    string
-	Monitor map[string]Mon
-}
-
-type Mon struct {
-	Url        string
-	Timeout    int64
-	File       string
-	Headers    []string
-	Assertions []string
-}
-
-func _main() {
-	c := C{}
-	_, err := toml.DecodeFile("config_hmon.toml", &c)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(c)
 }
 
 // Entry point of this program.
@@ -357,7 +336,7 @@ FLAGS (with defaults):
 		writeFunc = writeDefault
 		break
 	case "json":
-		writeFunc = writeJson
+		writeFunc = writeJSON
 		break
 	case "csv":
 		writeFunc = writeCsv
