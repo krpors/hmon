@@ -1,41 +1,132 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <con:soapui-project xmlns:con="http://eviware.com/soapui/config" activeEnvironment="Default" name="Demo" resourceRoot="" soapui-version="4.5.2" abortOnError="false" runType="SEQUENTIAL">
   <con:settings/>
-
-  <con:interface 
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-      xsi:type="con:WsdlInterface" 
-      wsaVersion="NONE"
-      name="Inloggen-1.0EndpointBinding"
-      type="wsdl"
-      bindingName="{http://rivium.nl/servicepunt/services/viewpoint/Inloggen/1.0/wsdl/concrete}Inloggen-1.0EndpointBinding"
-      soapVersion="1_1"
-      anonymous="optional"
-      definition="http://nlconvg00028:25000/Services/ViewPoint/Inloggen/1.0/ServiceAgents/Inloggen-1.0.serviceagent?wsdl">
+  <con:interface xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="con:WsdlInterface" wsaVersion="NONE" name="Inloggen-1.0EndpointBinding" type="wsdl" bindingName="{http://rivium.nl/servicepunt/services/viewpoint/Inloggen/1.0/wsdl/concrete}Inloggen-1.0EndpointBinding" soapVersion="1_1" anonymous="optional" definition="http://nlconvg00028:25000/Services/ViewPoint/Inloggen/1.0/ServiceAgents/Inloggen-1.0.serviceagent?wsdl">
     <con:settings/>
     <con:definitionCache type="TEXT" rootPart="http://nlconvg00028:25000/Services/ViewPoint/Inloggen/1.0/ServiceAgents/Inloggen-1.0.serviceagent?wsdl">
       <con:part>
         <con:url>http://nlconvg00028:25000/Services/ViewPoint/Inloggen/1.0/ServiceAgents/Inloggen-1.0.serviceagent?wsdl</con:url>
         <con:content><![CDATA[<!--Created by TIBCO WSDL-->
 <wsdl:definitions name="Untitled" targetNamespace="http://rivium.nl/servicepunt/services/viewpoint/Inloggen/1.0/wsdl/concrete" xmlns:ns2="http://rivium.nl/servicepunt/services/common/SystemFault/1.0" xmlns:ns1="http://rivium.nl/servicepunt/services/viewpoint/InloggenResponse/1.0" xmlns:ns4="http://rivium.nl/servicepunt/services/common/Types/1.0" xmlns:ns3="http://rivium.nl/servicepunt/services/viewpoint/InloggenFunctionalFault/1.0" xmlns:tns="http://rivium.nl/servicepunt/services/viewpoint/Inloggen/1.0/wsdl/concrete" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:ns0="http://rivium.nl/servicepunt/services/viewpoint/InloggenRequest/1.0" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/">
+  <wsdl:types>
+    <xsd:schema targetNamespace="http://rivium.nl/servicepunt/services/common/SystemFault/1.0" elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:sf="http://rivium.nl/servicepunt/services/common/SystemFault/1.0">
+      <xsd:complexType name="TSystemFault">
+        <xsd:sequence>
+          <xsd:element name="Code" type="xsd:string"/>
+          <xsd:element name="Message" type="xsd:string"/>
+          <xsd:element name="Detail" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Characteristic" minOccurs="0">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:any minOccurs="0" maxOccurs="unbounded" processContents="skip" namespace="##any"/>
+              </xsd:sequence>
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:element name="SystemFault" type="sf:TSystemFault"/>
+    </xsd:schema>
+    <xsd:schema targetNamespace="http://rivium.nl/servicepunt/services/viewpoint/InloggenFunctionalFault/1.0" elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:svc="http://rivium.nl/servicepunt/services/viewpoint/InloggenFunctionalFault/1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <xsd:complexType name="TFunctionalFault">
+        <xsd:sequence>
+          <xsd:element name="Reden" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:element name="InloggenFunctionalFault" type="svc:TFunctionalFault"/>
+    </xsd:schema>
+    <xsd:schema targetNamespace="http://rivium.nl/servicepunt/services/viewpoint/InloggenRequest/1.0" elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:svc="http://rivium.nl/servicepunt/services/viewpoint/InloggenRequest/1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <xsd:complexType name="TRequest">
+        <xsd:sequence>
+          <xsd:element name="Gebruikersnaam" type="xsd:string"/>
+          <xsd:element name="Wachtwoord" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:element name="InloggenRequest" type="svc:TRequest"/>
+    </xsd:schema>
+    <xsd:schema targetNamespace="http://rivium.nl/servicepunt/services/common/Types/1.0" elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:common="http://rivium.nl/servicepunt/services/common/Types/1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <xsd:simpleType name="TGeslacht">
+        <xsd:restriction base="xsd:string">
+          <xsd:length value="1"/>
+          <xsd:pattern value="M|V"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+      <xsd:simpleType name="TPostcode">
+        <xsd:restriction base="xsd:string">
+          <xsd:length value="6"/>
+          <xsd:pattern value="[0-9]{4}[A-Z]{2}"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+    </xsd:schema>
+    <xsd:schema targetNamespace="http://rivium.nl/servicepunt/services/viewpoint/InloggenResponse/1.0" elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:svc="http://rivium.nl/servicepunt/services/viewpoint/InloggenResponse/1.0" xmlns:common="http://rivium.nl/servicepunt/services/common/Types/1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <xsd:import namespace="http://rivium.nl/servicepunt/services/common/Types/1.0"/>
+      <xsd:complexType name="TResponse">
+        <xsd:sequence>
+          <xsd:element name="RelatieId" type="xsd:integer"/>
+          <xsd:element name="Naam">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="Voornaam" type="xsd:string" minOccurs="0"/>
+                <xsd:element name="Achternaam" type="xsd:string" minOccurs="0"/>
+              </xsd:sequence>
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:element name="InloggenResponse" type="svc:TResponse"/>
+    </xsd:schema>
+  </wsdl:types>
+  <wsdl:service name="Inloggen-1.0.serviceagent">
+    <wsdl:port name="Inloggen-1.0Endpoint" binding="tns:Inloggen-1.0EndpointBinding">
+      <soap:address location="http://NLCONVG00028:25000/servicepunt/services/viewpoint/Inloggen/1.0"/>
+    </wsdl:port>
+  </wsdl:service>
+  <wsdl:portType name="Inloggen-1.0">
+    <wsdl:operation name="inloggen">
+      <wsdl:input message="tns:inloggenRequest"/>
+      <wsdl:output message="tns:inloggenResponse"/>
+      <wsdl:fault name="systemfault" message="tns:inloggenSystemFault"/>
+      <wsdl:fault name="functionalfault" message="tns:inloggenFunctionalFault"/>
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="Inloggen-1.0EndpointBinding" type="tns:Inloggen-1.0">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <wsdl:operation name="inloggen">
+      <soap:operation style="document" soapAction="http://rivium.com/servicepunt/services/viewpoint/Inloggen/1.0"/>
+      <wsdl:input>
+        <soap:body use="literal" parts="parameters"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" parts="parameters"/>
+      </wsdl:output>
+      <wsdl:fault name="systemfault">
+        <soap:fault use="literal" name="systemfault"/>
+      </wsdl:fault>
+      <wsdl:fault name="functionalfault">
+        <soap:fault use="literal" name="functionalfault"/>
+      </wsdl:fault>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:message name="inloggenRequest">
+    <wsdl:part name="parameters" element="ns0:InloggenRequest"/>
+  </wsdl:message>
+  <wsdl:message name="inloggenResponse">
+    <wsdl:part name="parameters" element="ns1:InloggenResponse"/>
+  </wsdl:message>
+  <wsdl:message name="inloggenSystemFault">
+    <wsdl:part name="parameters" element="ns2:SystemFault"/>
+  </wsdl:message>
+  <wsdl:message name="inloggenFunctionalFault">
+    <wsdl:part name="parameters" element="ns3:InloggenFunctionalFault"/>
+  </wsdl:message>
 </wsdl:definitions>]]></con:content>
         <con:type>http://schemas.xmlsoap.org/wsdl/</con:type>
       </con:part>
     </con:definitionCache>
     <con:endpoints>
-      <con:endpoint>http://NLCONVG00028:25000/servicepunt/services/viewpoint/Inloggen/1.0</con:endpoint>
+      <con:endpoint>http://10.11.2.12:25000/servicepunt/services/viewpoint/Inloggen/1.0</con:endpoint>
       <con:endpoint>http://localhost:9000/servicepunt/services/viewpoint/Inloggen/1.0</con:endpoint>
     </con:endpoints>
-    <con:operation 
-        isOneWay="false" 
-        action="http://rivium.com/servicepunt/services/viewpoint/Inloggen/1.0" 
-        name="inloggen" 
-        bindingOperationName="inloggen" 
-        type="Request-Response" 
-        inputName="" 
-        receivesAttachments="false" 
-        sendsAttachments="false" 
-        anonymous="optional">
+    <con:operation isOneWay="false" action="http://rivium.com/servicepunt/services/viewpoint/Inloggen/1.0" name="inloggen" bindingOperationName="inloggen" type="Request-Response" inputName="" receivesAttachments="false" sendsAttachments="false" anonymous="optional">
       <con:settings/>
       <con:call name="ARICAN">
         <con:settings>
@@ -62,8 +153,6 @@
       </con:call>
     </con:operation>
   </con:interface>
-
-
   <con:interface xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="con:WsdlInterface" wsaVersion="NONE" name="GetHuishoudenOverzicht-1.0EndpointBinding" type="wsdl" bindingName="{http://rivium.nl/servicepunt/services/viewpoint/GetHuishoudenOverzicht/1.0/wsdl/concrete}GetHuishoudenOverzicht-1.0EndpointBinding" soapVersion="1_1" anonymous="optional" definition="http://nlconvg00028:25000/Services/ViewPoint/GetHuishoudenOverzicht/1.0/ServiceAgents/GetHuishoudenOverzicht-1.0.serviceagent?wsdl">
     <con:settings/>
     <con:definitionCache type="TEXT" rootPart="http://nlconvg00028:25000/Services/ViewPoint/GetHuishoudenOverzicht/1.0/ServiceAgents/GetHuishoudenOverzicht-1.0.serviceagent?wsdl">
@@ -71,6 +160,234 @@
         <con:url>http://nlconvg00028:25000/Services/ViewPoint/GetHuishoudenOverzicht/1.0/ServiceAgents/GetHuishoudenOverzicht-1.0.serviceagent?wsdl</con:url>
         <con:content><![CDATA[<!--Created by TIBCO WSDL-->
 <wsdl:definitions name="Untitled" targetNamespace="http://rivium.nl/servicepunt/services/viewpoint/GetHuishoudenOverzicht/1.0/wsdl/concrete" xmlns:ns2="http://rivium.nl/servicepunt/services/common/SystemFault/1.0" xmlns:ns1="http://rivium.nl/servicepunt/services/viewpoint/GetHuishoudenOverzichtResponse/1.0" xmlns:ns4="http://rivium.nl/servicepunt/services/common/Types/1.0" xmlns:ns3="http://rivium.nl/servicepunt/services/viewpoint/GetHuishoudenOverzichtFunctionalFault/1.0" xmlns:tns="http://rivium.nl/servicepunt/services/viewpoint/GetHuishoudenOverzicht/1.0/wsdl/concrete" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:ns0="http://rivium.nl/servicepunt/services/viewpoint/GetHuishoudenOverzichtRequest/1.0" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/">
+  <wsdl:types>
+    <xsd:schema targetNamespace="http://rivium.nl/servicepunt/services/viewpoint/GetHuishoudenOverzichtFunctionalFault/1.0" elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:svc="http://rivium.nl/servicepunt/services/viewpoint/GetHuishoudenOverzichtFunctionalFault/1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <xsd:complexType name="TFunctionalFault">
+        <xsd:sequence>
+          <xsd:element name="Reden" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:element name="GetHuishoudenOverzichtFunctionalFault" type="svc:TFunctionalFault"/>
+    </xsd:schema>
+    <xsd:schema targetNamespace="http://rivium.nl/servicepunt/services/common/SystemFault/1.0" elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:sf="http://rivium.nl/servicepunt/services/common/SystemFault/1.0">
+      <xsd:complexType name="TSystemFault">
+        <xsd:sequence>
+          <xsd:element name="Code" type="xsd:string"/>
+          <xsd:element name="Message" type="xsd:string"/>
+          <xsd:element name="Detail" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Characteristic" minOccurs="0">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:any minOccurs="0" maxOccurs="unbounded" processContents="skip" namespace="##any"/>
+              </xsd:sequence>
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:element name="SystemFault" type="sf:TSystemFault"/>
+    </xsd:schema>
+    <xsd:schema targetNamespace="http://rivium.nl/servicepunt/services/viewpoint/GetHuishoudenOverzichtResponse/1.0" elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:svc="http://rivium.nl/servicepunt/services/viewpoint/GetHuishoudenOverzichtResponse/1.0" xmlns:common="http://rivium.nl/servicepunt/services/common/Types/1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <xsd:import namespace="http://rivium.nl/servicepunt/services/common/Types/1.0"/>
+      <xsd:complexType name="TAdres">
+        <xsd:sequence>
+          <xsd:element name="Type" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Straatnaam" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Huisnummer" type="xsd:integer" minOccurs="0"/>
+          <xsd:element name="HuisnummerToevoeging" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Postcode" type="common:TPostcode" minOccurs="0"/>
+          <xsd:element name="Woonplaats" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Land" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="TBankRekening">
+        <xsd:sequence>
+          <xsd:element name="Id" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Voorkeur" type="xsd:boolean" minOccurs="0"/>
+          <xsd:element name="Geblokkeerd" type="xsd:boolean" minOccurs="0"/>
+          <xsd:element name="IBAN" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="BBAN" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Bank">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="Id" type="xsd:string" minOccurs="0"/>
+                <xsd:element name="Banknaam" type="xsd:string" minOccurs="0"/>
+                <xsd:element name="Omschrijving" type="xsd:string" minOccurs="0"/>
+                <xsd:element name="BIC" type="xsd:string" minOccurs="0"/>
+                <xsd:element name="Plaatsnaam" type="xsd:string" minOccurs="0"/>
+                <xsd:element name="Geblokkeerd" type="xsd:boolean" minOccurs="0"/>
+              </xsd:sequence>
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="TBedrijf">
+        <xsd:sequence>
+          <xsd:element name="Id" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Rol" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="BedrijfsNaam" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="WeergaveNaam" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="TelefoonNummer" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="EmailAdres" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="TBetalingsRegeling">
+        <xsd:sequence>
+          <xsd:element name="Id" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="StartDatum" type="xsd:date" minOccurs="0"/>
+          <xsd:element name="Bedrag" type="xsd:decimal" minOccurs="0"/>
+          <xsd:element name="ContractId" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="TContact">
+        <xsd:sequence>
+          <xsd:element name="Type" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Waarde" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Omschrijving" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="ContactId" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="THuishouden">
+        <xsd:sequence>
+          <xsd:element name="Status" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="RelatieList" minOccurs="0">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="Relatie" type="svc:TRelatie" maxOccurs="unbounded"/>
+              </xsd:sequence>
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="TNaam">
+        <xsd:sequence>
+          <xsd:element name="Voorletters" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Tussenvoegsel" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Achternaam" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="TRelatie">
+        <xsd:sequence>
+          <xsd:element name="Rol" type="xsd:string"/>
+          <xsd:element name="ContractantType" type="xsd:string" minOccurs="0">
+            <xsd:annotation>
+              <xsd:documentation>Het type. Uit Itris is dit bijvoorbeeld HOOFDCONTRACTANT of MEDECONTRACTANT etc.</xsd:documentation>
+            </xsd:annotation>
+          </xsd:element>
+          <xsd:element name="RelatieId" type="xsd:string"/>
+          <xsd:element name="GeboorteDatum" type="xsd:date" minOccurs="0"/>
+          <xsd:element name="Geslacht" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="BurgelijkeStaat" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="BSN" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Naam" type="svc:TNaam" minOccurs="0"/>
+          <xsd:element name="Bedrijf" type="svc:TBedrijf" minOccurs="0"/>
+          <xsd:element name="ContactList" minOccurs="0">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="Contact" type="svc:TContact" minOccurs="0" maxOccurs="unbounded"/>
+              </xsd:sequence>
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="AdresList" minOccurs="0">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="Adres" type="svc:TAdres" minOccurs="0" maxOccurs="unbounded"/>
+              </xsd:sequence>
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="BankRekeningList" minOccurs="0">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="BankRekening" type="svc:TBankRekening" minOccurs="0" maxOccurs="unbounded"/>
+              </xsd:sequence>
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="BetalingsRegelingList" minOccurs="0">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="BetalingsRegeling" type="svc:TBetalingsRegeling" minOccurs="0" maxOccurs="unbounded"/>
+              </xsd:sequence>
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="TResponse">
+        <xsd:sequence>
+          <xsd:element name="HuishoudenList" minOccurs="0">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="Huishouden" type="svc:THuishouden" maxOccurs="unbounded"/>
+              </xsd:sequence>
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:element name="GetHuishoudenOverzichtResponse" type="svc:TResponse"/>
+    </xsd:schema>
+    <xsd:schema targetNamespace="http://rivium.nl/servicepunt/services/viewpoint/GetHuishoudenOverzichtRequest/1.0" elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:svc="http://rivium.nl/servicepunt/services/viewpoint/GetHuishoudenOverzichtRequest/1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <xsd:complexType name="TRequest">
+        <xsd:sequence>
+          <xsd:element name="RelatieId" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:element name="GetHuishoudenOverzichtRequest" type="svc:TRequest"/>
+    </xsd:schema>
+    <xsd:schema targetNamespace="http://rivium.nl/servicepunt/services/common/Types/1.0" elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:common="http://rivium.nl/servicepunt/services/common/Types/1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <xsd:simpleType name="TGeslacht">
+        <xsd:restriction base="xsd:string">
+          <xsd:length value="1"/>
+          <xsd:pattern value="M|V"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+      <xsd:simpleType name="TPostcode">
+        <xsd:restriction base="xsd:string">
+          <xsd:length value="6"/>
+          <xsd:pattern value="[0-9]{4}[A-Z]{2}"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+    </xsd:schema>
+  </wsdl:types>
+  <wsdl:service name="GetHuishoudenOverzicht-1.0.serviceagent">
+    <wsdl:port name="GetHuishoudenOverzicht-1.0Endpoint" binding="tns:GetHuishoudenOverzicht-1.0EndpointBinding">
+      <soap:address location="http://NLCONVG00028:25000/servicepunt/services/viewpoint/GetHuishoudenOverzicht/1.0"/>
+    </wsdl:port>
+  </wsdl:service>
+  <wsdl:portType name="GetHuishoudenOverzicht-1.0">
+    <wsdl:operation name="getHuishoudenOverzicht">
+      <wsdl:input message="tns:getHuishoudenOverzichtRequest"/>
+      <wsdl:output message="tns:getHuishoudenOverzichtResponse"/>
+      <wsdl:fault name="systemfault" message="tns:getHuishoudenOverzichtSystemFault"/>
+      <wsdl:fault name="functionalfault" message="tns:getHuishoudenOverzichtFunctionalFault"/>
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="GetHuishoudenOverzicht-1.0EndpointBinding" type="tns:GetHuishoudenOverzicht-1.0">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <wsdl:operation name="getHuishoudenOverzicht">
+      <soap:operation style="document" soapAction="http://rivium.com/servicepunt/services/viewpoint/GetHuishoudenOverzicht/1.0"/>
+      <wsdl:input>
+        <soap:body use="literal" parts="parameters"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" parts="parameters"/>
+      </wsdl:output>
+      <wsdl:fault name="systemfault">
+        <soap:fault use="literal" name="systemfault"/>
+      </wsdl:fault>
+      <wsdl:fault name="functionalfault">
+        <soap:fault use="literal" name="functionalfault"/>
+      </wsdl:fault>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:message name="getHuishoudenOverzichtRequest">
+    <wsdl:part name="parameters" element="ns0:GetHuishoudenOverzichtRequest"/>
+  </wsdl:message>
+  <wsdl:message name="getHuishoudenOverzichtResponse">
+    <wsdl:part name="parameters" element="ns1:GetHuishoudenOverzichtResponse"/>
+  </wsdl:message>
+  <wsdl:message name="getHuishoudenOverzichtSystemFault">
+    <wsdl:part name="parameters" element="ns2:SystemFault"/>
+  </wsdl:message>
+  <wsdl:message name="getHuishoudenOverzichtFunctionalFault">
+    <wsdl:part name="parameters" element="ns3:GetHuishoudenOverzichtFunctionalFault"/>
   </wsdl:message>
 </wsdl:definitions>]]></con:content>
         <con:type>http://schemas.xmlsoap.org/wsdl/</con:type>
@@ -106,22 +423,200 @@
       </con:call>
     </con:operation>
   </con:interface>
-
-
-  <con:interface xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="con:WsdlInterface" wsaVersion="NONE" name="GetRelatieInfo-1.0EndpointBinding" type="wsdl" bindingName="{http://rivium.nl/servicepunt/services/viewpoint/GetRelatieInfo/1.0/wsdl/concrete}GetRelatieInfo-1.0EndpointBinding" soapVersion="1_1" anonymous="optional" definition="http://nlconvg00028:25000/Services/ViewPoint/GetRelatieInfo/1.0/ServiceAgents/GetRelatieInfo-1.0.serviceagent?wsdl">
+  <con:interface xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="con:WsdlInterface" wsaVersion="NONE" name="GetRelatieInfo-1.0EndpointBinding" type="wsdl" bindingName="{http://rivium.nl/servicepunt/services/viewpoint/GetRelatieInfo/1.0/wsdl/concrete}GetRelatieInfo-1.0EndpointBinding" soapVersion="1_1" anonymous="optional" definition="http://localhost:9000/Services/ViewPoint/GetRelatieInfo/1.0/ServiceAgents/GetRelatieInfo-1.0.serviceagent?wsdl">
     <con:settings/>
-    <con:definitionCache type="TEXT" rootPart="http://nlconvg00028:25000/Services/ViewPoint/GetRelatieInfo/1.0/ServiceAgents/GetRelatieInfo-1.0.serviceagent?wsdl">
+    <con:definitionCache type="TEXT" rootPart="http://localhost:9000/Services/ViewPoint/GetRelatieInfo/1.0/ServiceAgents/GetRelatieInfo-1.0.serviceagent?wsdl">
       <con:part>
-        <con:url>http://nlconvg00028:25000/Services/ViewPoint/GetRelatieInfo/1.0/ServiceAgents/GetRelatieInfo-1.0.serviceagent?wsdl</con:url>
+        <con:url>http://localhost:9000/Services/ViewPoint/GetRelatieInfo/1.0/ServiceAgents/GetRelatieInfo-1.0.serviceagent?wsdl</con:url>
         <con:content><![CDATA[<!--Created by TIBCO WSDL-->
 <wsdl:definitions name="Untitled" targetNamespace="http://rivium.nl/servicepunt/services/viewpoint/GetRelatieInfo/1.0/wsdl/concrete" xmlns:ns2="http://rivium.nl/servicepunt/services/common/SystemFault/1.0" xmlns:ns1="http://rivium.nl/servicepunt/services/viewpoint/GetRelatieInfoResponse/1.0" xmlns:ns4="http://rivium.nl/servicepunt/services/common/Types/1.0" xmlns:ns3="http://rivium.nl/servicepunt/services/viewpoint/GetRelatieInfoFunctionalFault/1.0" xmlns:tns="http://rivium.nl/servicepunt/services/viewpoint/GetRelatieInfo/1.0/wsdl/concrete" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:ns0="http://rivium.nl/servicepunt/services/viewpoint/GetRelatieInfoRequest/1.0" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/">
+  <wsdl:types>
+    <xsd:schema targetNamespace="http://rivium.nl/servicepunt/services/common/SystemFault/1.0" elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:sf="http://rivium.nl/servicepunt/services/common/SystemFault/1.0">
+      <xsd:complexType name="TSystemFault">
+        <xsd:sequence>
+          <xsd:element name="Code" type="xsd:string"/>
+          <xsd:element name="Message" type="xsd:string"/>
+          <xsd:element name="Detail" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Characteristic" minOccurs="0">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:any minOccurs="0" maxOccurs="unbounded" processContents="skip" namespace="##any"/>
+              </xsd:sequence>
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:element name="SystemFault" type="sf:TSystemFault"/>
+    </xsd:schema>
+    <xsd:schema targetNamespace="http://rivium.nl/servicepunt/services/common/Types/1.0" elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:common="http://rivium.nl/servicepunt/services/common/Types/1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <xsd:simpleType name="TGeslacht">
+        <xsd:restriction base="xsd:string">
+          <xsd:length value="1"/>
+          <xsd:pattern value="M|V"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+      <xsd:simpleType name="TPostcode">
+        <xsd:restriction base="xsd:string">
+          <xsd:length value="6"/>
+          <xsd:pattern value="[0-9]{4}[A-Z]{2}"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+    </xsd:schema>
+    <xsd:schema targetNamespace="http://rivium.nl/servicepunt/services/viewpoint/GetRelatieInfoResponse/1.0" elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:svc="http://rivium.nl/servicepunt/services/viewpoint/GetRelatieInfoResponse/1.0" xmlns:common="http://rivium.nl/servicepunt/services/common/Types/1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <xsd:import namespace="http://rivium.nl/servicepunt/services/common/Types/1.0"/>
+      <xsd:complexType name="TAdres">
+        <xsd:sequence>
+          <xsd:element name="Type" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Straatnaam" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Huisnummer" type="xsd:integer" minOccurs="0"/>
+          <xsd:element name="HuisnummerToevoeging" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Postcode" type="common:TPostcode" minOccurs="0"/>
+          <xsd:element name="Woonplaats" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Land" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="TBankRekening">
+        <xsd:sequence>
+          <xsd:element name="Id" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Voorkeur" type="xsd:boolean" minOccurs="0"/>
+          <xsd:element name="Geblokkeerd" type="xsd:boolean" minOccurs="0"/>
+          <xsd:element name="IBAN" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="BBAN" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Bank" minOccurs="0">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="Id" type="xsd:string" minOccurs="0"/>
+                <xsd:element name="Banknaam" type="xsd:string" minOccurs="0"/>
+                <xsd:element name="Omschrijving" type="xsd:string" minOccurs="0"/>
+                <xsd:element name="BIC" type="xsd:string" minOccurs="0"/>
+                <xsd:element name="Plaatsnaam" type="xsd:string" minOccurs="0"/>
+                <xsd:element name="Geblokkeerd" type="xsd:boolean" minOccurs="0"/>
+              </xsd:sequence>
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="TContact">
+        <xsd:sequence>
+          <xsd:element name="Type" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Waarde" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Omschrijving" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="ContractId" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="TNaam">
+        <xsd:sequence>
+          <xsd:element name="Voorletters" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Tussenvoegsel" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Achternaam" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="TRelatie">
+        <xsd:sequence>
+          <xsd:element name="Rol" type="xsd:string"/>
+          <xsd:element name="RelatieId" type="xsd:string"/>
+          <xsd:element name="GeboorteDatum" type="xsd:date" minOccurs="0"/>
+          <xsd:element name="Geslacht" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="BurgelijkeStaat" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="BSN" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Naam" type="svc:TNaam"/>
+          <xsd:element name="ContactList" minOccurs="0">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="Contact" type="svc:TContact" minOccurs="0" maxOccurs="unbounded"/>
+              </xsd:sequence>
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="AdresList" minOccurs="0">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="Adres" type="svc:TAdres" minOccurs="0" maxOccurs="unbounded"/>
+              </xsd:sequence>
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="BankRekeningList" minOccurs="0">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="BankRekening" type="svc:TBankRekening" minOccurs="0" maxOccurs="unbounded"/>
+              </xsd:sequence>
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="TResponse">
+        <xsd:sequence>
+          <xsd:element name="Relatie" type="svc:TRelatie"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:element name="GetRelatieInfoResponse" type="svc:TResponse"/>
+    </xsd:schema>
+    <xsd:schema targetNamespace="http://rivium.nl/servicepunt/services/viewpoint/GetRelatieInfoRequest/1.0" elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:svc="http://rivium.nl/servicepunt/services/viewpoint/GetRelatieInfoRequest/1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <xsd:complexType name="TRequest">
+        <xsd:sequence>
+          <xsd:element name="RelatieId" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:element name="GetRelatieInfoRequest" type="svc:TRequest"/>
+    </xsd:schema>
+    <xsd:schema targetNamespace="http://rivium.nl/servicepunt/services/viewpoint/GetRelatieInfoFunctionalFault/1.0" elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:svc="http://rivium.nl/servicepunt/services/viewpoint/GetRelatieInfoFunctionalFault/1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <xsd:complexType name="TFunctionalFault">
+        <xsd:sequence>
+          <xsd:element name="Reden" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:element name="GetRelatieInfoFunctionalFault" type="svc:TFunctionalFault"/>
+    </xsd:schema>
+  </wsdl:types>
+  <wsdl:service name="GetRelatieInfo-1.0.serviceagent">
+    <wsdl:port name="GetRelatieInfo-1.0Endpoint" binding="tns:GetRelatieInfo-1.0EndpointBinding">
+      <soap:address location="http://ROFLCOPTER:9000/servicepunt/services/viewpoint/GetRelatieInfo/1.0"/>
+    </wsdl:port>
+  </wsdl:service>
+  <wsdl:portType name="GetRelatieInfo-1.0">
+    <wsdl:operation name="getRelatieInfo">
+      <wsdl:input message="tns:getRelatieInfoRequest"/>
+      <wsdl:output message="tns:getRelatieInfoResponse"/>
+      <wsdl:fault name="systemfault" message="tns:getRelatieInfoSystemFault"/>
+      <wsdl:fault name="functionalfault" message="tns:getRelatieInfoFunctionalFault"/>
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="GetRelatieInfo-1.0EndpointBinding" type="tns:GetRelatieInfo-1.0">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <wsdl:operation name="getRelatieInfo">
+      <soap:operation style="document" soapAction="http://rivium.com/servicepunt/services/viewpoint/GetRelatieInfo/1.0"/>
+      <wsdl:input>
+        <soap:body use="literal" parts="parameters"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" parts="parameters"/>
+      </wsdl:output>
+      <wsdl:fault name="systemfault">
+        <soap:fault use="literal" name="systemfault"/>
+      </wsdl:fault>
+      <wsdl:fault name="functionalfault">
+        <soap:fault use="literal" name="functionalfault"/>
+      </wsdl:fault>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:message name="getRelatieInfoRequest">
+    <wsdl:part name="parameters" element="ns0:GetRelatieInfoRequest"/>
+  </wsdl:message>
+  <wsdl:message name="getRelatieInfoResponse">
+    <wsdl:part name="parameters" element="ns1:GetRelatieInfoResponse"/>
+  </wsdl:message>
+  <wsdl:message name="getRelatieInfoSystemFault">
+    <wsdl:part name="parameters" element="ns2:SystemFault"/>
+  </wsdl:message>
+  <wsdl:message name="getRelatieInfoFunctionalFault">
+    <wsdl:part name="parameters" element="ns3:GetRelatieInfoFunctionalFault"/>
+  </wsdl:message>
 </wsdl:definitions>]]></con:content>
         <con:type>http://schemas.xmlsoap.org/wsdl/</con:type>
       </con:part>
     </con:definitionCache>
     <con:endpoints>
-      <con:endpoint>http://ROFLCOPTER:9000/servicepunt/services/viewpoint/GetRelatieInfo/1.0</con:endpoint>
-      <con:endpoint>http://NLCONVG00028:25000/servicepunt/services/viewpoint/GetRelatieInfo/1.0</con:endpoint>
+      <con:endpoint>http://localhost:9000/servicepunt/services/viewpoint/GetRelatieInfo/1.0</con:endpoint>
+      <con:endpoint>http://10.11.2.12:25000/servicepunt/services/viewpoint/GetRelatieInfo/1.0</con:endpoint>
     </con:endpoints>
     <con:operation isOneWay="false" action="http://rivium.com/servicepunt/services/viewpoint/GetRelatieInfo/1.0" name="getRelatieInfo" bindingOperationName="getRelatieInfo" type="Request-Response" inputName="" receivesAttachments="false" sendsAttachments="false" anonymous="optional">
       <con:settings/>
@@ -130,7 +625,7 @@
           <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/&gt;</con:setting>
         </con:settings>
         <con:encoding>UTF-8</con:encoding>
-        <con:endpoint>http://NLCONVG00028:25000/servicepunt/services/viewpoint/GetRelatieInfo/1.0</con:endpoint>
+        <con:endpoint>http://10.11.2.12:25000/servicepunt/services/viewpoint/GetRelatieInfo/1.0</con:endpoint>
         <con:request><![CDATA[<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://rivium.nl/servicepunt/services/viewpoint/GetRelatieInfoRequest/1.0">
    <soapenv:Header/>
    <soapenv:Body>
@@ -149,45 +644,35 @@
       </con:call>
     </con:operation>
   </con:interface>
-
-
-
   <con:testSuite name="Demo">
     <con:settings/>
     <con:runType>SEQUENTIAL</con:runType>
-    <con:testCase failOnError="true" failTestCaseOnErrors="true" keepSession="false" maxResults="0" name="Service Checks" searchProperties="true">
+    <con:testCase failOnError="true" failTestCaseOnErrors="true" keepSession="false" maxResults="0" name="Service Checks" searchProperties="true" id="36ee1d8c-1cad-4929-ae4e-2a8248a354f8">
       <con:settings/>
       <con:testStep type="request" name="Inloggen-1.0">
         <con:settings/>
         <con:config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="con:RequestStep">
           <con:interface>Inloggen-1.0EndpointBinding</con:interface>
           <con:operation>inloggen</con:operation>
-          <con:request name="Inloggen-1.0">
+          <con:request name="Inloggen-1.0" timeout="10000">
             <con:settings>
               <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/&gt;</con:setting>
             </con:settings>
             <con:encoding>UTF-8</con:encoding>
-            <con:endpoint>http://NLCONVG00028:25000/servicepunt/services/viewpoint/Inloggen/1.0</con:endpoint>
+            <con:endpoint>http://10.11.2.12:25000/servicepunt/services/viewpoint/Inloggen/1.0</con:endpoint>
             <con:request><![CDATA[<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://rivium.nl/servicepunt/services/viewpoint/InloggenRequest/1.0">
    <soapenv:Header/>
    <soapenv:Body>
       <ns:InloggenRequest>
-         <ns:Gebruikersnaam>?</ns:Gebruikersnaam>
-         <ns:Wachtwoord>?</ns:Wachtwoord>
+         <ns:Gebruikersnaam>bestaat_niet</ns:Gebruikersnaam>
+         <ns:Wachtwoord></ns:Wachtwoord>
       </ns:InloggenRequest>
    </soapenv:Body>
 </soapenv:Envelope>]]></con:request>
             <con:assertion type="SOAP Response"/>
             <con:assertion type="Simple Contains" name="Contains">
               <con:configuration>
-                <token>Gelukt!!</token>
-                <ignoreCase>false</ignoreCase>
-                <useRegEx>false</useRegEx>
-              </con:configuration>
-            </con:assertion>
-            <con:assertion type="Simple Contains" name="Contains 1">
-              <con:configuration>
-                <token>asojaskjlkja</token>
+                <token>Inloggen is mislukt</token>
                 <ignoreCase>false</ignoreCase>
                 <useRegEx>false</useRegEx>
               </con:configuration>
@@ -207,22 +692,61 @@
         <con:config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="con:RequestStep">
           <con:interface>GetRelatieInfo-1.0EndpointBinding</con:interface>
           <con:operation>getRelatieInfo</con:operation>
-          <con:request name="GetRelatieInfo-1.0">
-            <con:settings/>
+          <con:request name="GetRelatieInfo-1.0" timeout="15000">
+            <con:settings>
+              <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/&gt;</con:setting>
+            </con:settings>
             <con:encoding>UTF-8</con:encoding>
-            <con:endpoint>http://ROFLCOPTER:9000/servicepunt/services/viewpoint/GetRelatieInfo/1.0</con:endpoint>
+            <con:endpoint>http://10.11.2.12:25000/servicepunt/services/viewpoint/GetRelatieInfo/1.0</con:endpoint>
             <con:request><![CDATA[<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://rivium.nl/servicepunt/services/viewpoint/GetRelatieInfoRequest/1.0">
    <soapenv:Header/>
    <soapenv:Body>
       <ns:GetRelatieInfoRequest>
-         <ns:RelatieId>?</ns:RelatieId>
+         <ns:RelatieId>99999999</ns:RelatieId>
       </ns:GetRelatieInfoRequest>
    </soapenv:Body>
 </soapenv:Envelope>]]></con:request>
             <con:assertion type="SOAP Response"/>
             <con:assertion type="Simple Contains" name="Contains">
               <con:configuration>
-                <token>Een relatie ID is teruggekomen.</token>
+                <token>Relatie info kon niet opgevraagd worden</token>
+                <ignoreCase>false</ignoreCase>
+                <useRegEx>false</useRegEx>
+              </con:configuration>
+            </con:assertion>
+            <con:credentials>
+              <con:authType>Global HTTP Settings</con:authType>
+            </con:credentials>
+            <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+            <con:jmsPropertyConfig/>
+            <con:wsaConfig mustUnderstand="NONE" version="200508"/>
+            <con:wsrmConfig version="1.2"/>
+          </con:request>
+        </con:config>
+      </con:testStep>
+      <con:testStep type="request" name="GetHuishoudenOverzicht-1.0">
+        <con:settings/>
+        <con:config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="con:RequestStep">
+          <con:interface>GetHuishoudenOverzicht-1.0EndpointBinding</con:interface>
+          <con:operation>getHuishoudenOverzicht</con:operation>
+          <con:request name="GetHuishoudenOverzicht-1.0" timeout="10500">
+            <con:settings>
+              <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/&gt;</con:setting>
+            </con:settings>
+            <con:encoding>UTF-8</con:encoding>
+            <con:endpoint>http://NLCONVG00028:25000/servicepunt/services/viewpoint/GetHuishoudenOverzicht/1.0</con:endpoint>
+            <con:request><![CDATA[<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://rivium.nl/servicepunt/services/viewpoint/GetHuishoudenOverzichtRequest/1.0">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <ns:GetHuishoudenOverzichtRequest>
+         <ns:RelatieId>99999999</ns:RelatieId>
+      </ns:GetHuishoudenOverzichtRequest>
+   </soapenv:Body>
+</soapenv:Envelope>]]></con:request>
+            <con:assertion type="SOAP Response"/>
+            <con:assertion type="Simple Contains" name="Contains">
+              <con:configuration>
+                <token>Relatiegegevens konden niet opgevraagd worden</token>
                 <ignoreCase>false</ignoreCase>
                 <useRegEx>false</useRegEx>
               </con:configuration>

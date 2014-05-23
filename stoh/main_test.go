@@ -16,29 +16,32 @@ func prepareProject() Project {
 						TestStep: []TestStep{
 							{
 								Name:      "Step 1",
-								Endpoint:  "http://example.org:80/getRelationName/1.0",
-								Request:   "<soapenv:Envelope> ... </soapenv:Envelope>",
 								Binding:   "GetRelation1.0-EndpointBinding",
 								Operation: "getRelationName",
-								Assertion: []Assertion{
-									{
-										Type:  "Simple Contains",
-										Token: "Text in response",
-									},
-									{
-										Type:  "Simple Contains",
-										Token: "Other text",
-									},
-									{
-										// should be ignored for now (also, not sure
-										// if correct Type. Figure this out)
-										Type:  "RegEx",
-										Token: "^whatevs$",
-									},
-									{
-										// should be ignored
-										Type:  "Groovy Script",
-										Token: "slkjdalksj",
+								Request: Request{
+									Endpoint: "http://example.org:80/getRelationName/1.0",
+									Content:  "<soapenv:Envelope> ... </soapenv:Envelope>",
+									Timeout:  0,
+									Assertion: []Assertion{
+										{
+											Type:  "Simple Contains",
+											Token: "Text in response",
+										},
+										{
+											Type:  "Simple Contains",
+											Token: "Other text",
+										},
+										{
+											// should be ignored for now (also, not sure
+											// if correct Type. Figure this out)
+											Type:  "RegEx",
+											Token: "^whatevs$",
+										},
+										{
+											// should be ignored
+											Type:  "Groovy Script",
+											Token: "slkjdalksj",
+										},
 									},
 								},
 							},
@@ -106,7 +109,7 @@ func TestGetAssertions(t *testing.T) {
 	p := prepareProject()
 
 	testStep := p.TestSuite[0].TestCase[0].TestStep[0]
-	assertions := testStep.GetAssertions()
+	assertions := testStep.Request.GetAssertions()
 
 	if len(assertions) != 2 {
 		t.Errorf("Expected 2 assertions, got %d", len(assertions))
@@ -119,5 +122,15 @@ func TestGetAssertions(t *testing.T) {
 	expected = "Other text"
 	if assertions[1] != expected {
 		t.Errorf("Second assertion should be '%s', got '%s'", expected, assertions[1])
+	}
+}
+
+func TestGetTimeout(t* testing.T) {
+	p := prepareProject()
+	request := p.TestSuite[0].TestCase[0].TestStep[0].Request
+
+	timeout := request.GetTimeout()
+	if timeout != 30000 {
+		t.Errorf("Expected a default of 30000 ms when timeout is not specified")
 	}
 }

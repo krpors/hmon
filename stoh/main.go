@@ -58,13 +58,14 @@ func (p Project) Print(writer io.Writer) {
 			fmt.Printf("\tTestcase '%s'\n", t.Name)
 			for _, ts := range t.TestStep {
 				fmt.Fprintf(writer, "\t\tName:        %s\n", ts.Name)
-				fmt.Fprintf(writer, "\t\tEndpoint:    %s\n", ts.Endpoint)
+				fmt.Fprintf(writer, "\t\tEndpoint:    %s\n", ts.Request.Endpoint)
 				fmt.Fprintf(writer, "\t\tOperation:   %s\n", ts.Operation)
+				fmt.Fprintf(writer, "\t\tTimeout:     %d ms\n", ts.Request.GetTimeout())
 				fmt.Fprintf(writer, "\t\tBinding:     %s\n", ts.Binding)
-				fmt.Fprintf(writer, "\t\tReq len:     %d\n", len(ts.Request))
+				fmt.Fprintf(writer, "\t\tReq len:     %d\n", len(ts.Request.Content))
 				fmt.Fprintf(writer, "\t\tSOAPAction:  %s\n", p.FindSoapAction(ts.Binding, ts.Operation))
-				fmt.Fprintf(writer, "\t\tAssertions:  %d\n", len(ts.Assertion))
-				fmt.Fprintf(writer, "\t\t (valid):    %d\n", len(ts.GetAssertions()))
+				fmt.Fprintf(writer, "\t\tAssertions:  %d\n", len(ts.Request.Assertion))
+				fmt.Fprintf(writer, "\t\t (valid):    %d\n", len(ts.Request.GetAssertions()))
 				fmt.Fprintln(writer)
 			}
 		}
@@ -115,27 +116,10 @@ type TestCase struct {
 
 // TestStep contains information about teststeps within a testcase.
 type TestStep struct {
-	Name      string      `xml:"name,attr"`
-	Endpoint  string      `xml:"config>request>endpoint"`
-	Request   string      `xml:"config>request>request"`
-	Binding   string      `xml:"config>interface"`
-	Operation string      `xml:"config>operation"`
-	Assertion []Assertion `xml:"config>request>assertion"`
-}
-
-// GetAssertions find the correct assertions applicable for hmon. SoapUI defines
-// several types of assertions (like Groovy scripts etc.) but we're only interested
-// in the simple "Contains" assertions, since hmon can only assert against those.
-// Well, also regular expressions, but thats a TODO.
-func (ts TestStep) GetAssertions() []string {
-	var validAssertions []string
-
-	for _, ass := range ts.Assertion {
-		if ass.Type == "Simple Contains" {
-			validAssertions = append(validAssertions, ass.Token)
-		}
-	}
-	return validAssertions
+	Name      string  `xml:"name,attr"`
+	Binding   string  `xml:"config>interface"`
+	Operation string  `xml:"config>operation"`
+	Request   Request `xml:"config>request"`
 }
 
 // GetSanitizedName sanitizes the name of a teststep so it can be used in the resulting
@@ -144,6 +128,40 @@ func (ts TestStep) GetAssertions() []string {
 // are replaced with an empty string.
 func (ts TestStep) GetSanitizedName() string {
 	return strings.Replace(ts.Name, ".", "", -1)
+}
+
+// Request contains information about the teststep request. The timeout is defined in an
+// attribute, so we need to deserialize it in this struct.
+type Request struct {
+	Endpoint  string      `xml:"endpoint"`
+	Content   string      `xml:"request"`
+	Timeout   int         `xml:"timeout,attr"`
+	Assertion []Assertion `xml:"assertion"`
+}
+
+// GetAssertions find the correct assertions applicable for hmon. SoapUI defines
+// several types of assertions (like Groovy scripts etc.) but we're only interested
+// in the simple "Contains" assertions, since hmon can only assert against those.
+// Well, also regular expressions, but thats a TODO.
+func (req Request) GetAssertions() []string {
+	var validAssertions []string
+
+	for _, ass := range req.Assertion {
+		if ass.Type == "Simple Contains" {
+			validAssertions = append(validAssertions, ass.Token)
+		}
+	}
+	return validAssertions
+}
+
+// GetTimeout returns a 'sane' timeout value. If it's not found, or lower than zero, the
+// timeout will be set to a default of 30000 ms.
+func (req Request) GetTimeout() int {
+	if req.Timeout <= 0 {
+		return 30000
+	}
+
+	return req.Timeout
 }
 
 // Assertion contains information about the teststep's assertions.
@@ -203,7 +221,7 @@ func Process(p Project) {
 	MustCreateDir(postdatadir)
 
 	for _, s := range p.TestSuite {
-		outfile := MustCreateFile(path.Join(configsdir, s.Name + "_hmon.toml"))
+		outfile := MustCreateFile(path.Join(configsdir, s.Name+"_hmon.toml"))
 
 		testsuitePostdataDir := path.Join(postdatadir, s.Name)
 		MustCreateDir(testsuitePostdataDir)
@@ -213,19 +231,20 @@ func Process(p Project) {
 			for _, step := range c.TestStep {
 				// write the request file
 				postDataFile := MustCreateFile(path.Join(testsuitePostdataDir, step.Name+".xml"))
-				fmt.Fprintf(postDataFile, step.Request)
+				fmt.Fprintf(postDataFile, step.Request.Content)
 				postDataFile.Close()
 
 				fmt.Fprintf(outfile, "[monitor.%s]\n", step.GetSanitizedName())
 				fmt.Fprintf(outfile, "name = \"%s\"\n", step.Name)
-				fmt.Fprintf(outfile, "file = \"postdata/%s/%s.xml\"\n", s.Name, step.Name)
-				fmt.Fprintf(outfile, "url = \"%s\"\n", step.Endpoint)
+				fmt.Fprintf(outfile, "file = \"%s/%s.xml\"\n", s.Name, step.Name)
+				fmt.Fprintf(outfile, "url = \"%s\"\n", step.Request.Endpoint)
+				fmt.Fprintf(outfile, "timeout = %d\n", step.Request.GetTimeout())
 				fmt.Fprintf(outfile, "headers = [\n")
 				fmt.Fprintf(outfile, "  \"SOAPAction: %s\",\n", p.FindSoapAction(step.Binding, step.Operation))
 				fmt.Fprintf(outfile, "  \"Content-Type: %s\"\n", "application/soap+xml")
 				fmt.Fprintf(outfile, "]\n")
 				fmt.Fprintf(outfile, "assertions = [\n")
-				for _, ass := range step.GetAssertions() {
+				for _, ass := range step.Request.GetAssertions() {
 					fmt.Fprintf(outfile, "  \"%s\",\n", ass)
 				}
 				fmt.Fprintf(outfile, "]\n")
@@ -248,5 +267,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	Process(project, os.Stdout)
+	Process(project)
 }
