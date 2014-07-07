@@ -334,7 +334,7 @@ func ReadConfig(file string) (Config, error) {
 
 	c := Config{}
 	c.FileName = finfo.Name()
-	_, err = toml.DecodeFile(c.FileName, &c)
+	_, err = toml.DecodeFile(file, &c)
 	if err != nil {
 		return Config{}, fmt.Errorf("failed to parse file `%s': %s", file, err)
 	}
