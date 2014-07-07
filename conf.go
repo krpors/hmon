@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/xml"
 	"fmt"
 	"github.com/BurntSushi/toml"
 	"io/ioutil"
@@ -333,13 +332,9 @@ func ReadConfig(file string) (Config, error) {
 		return Config{}, fmt.Errorf("`%s' is not a regular file", file)
 	}
 
-	contents, err := ioutil.ReadFile(file)
-	if err != nil {
-	}
-
 	c := Config{}
 	c.FileName = finfo.Name()
-	err = xml.Unmarshal(contents, &c)
+	_, err = toml.DecodeFile(c.FileName, &c)
 	if err != nil {
 		return Config{}, fmt.Errorf("failed to parse file `%s': %s", file, err)
 	}
