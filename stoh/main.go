@@ -357,8 +357,6 @@ func Process(p Project) {
 			MergeMap(s.GetAllProperties(), properties)
 			MergeMap(c.GetAllProperties(), properties)
 
-			fmt.Println("MAP SIZE IS NOW", len(properties))
-
 			for _, step := range c.TestStep {
 
 				// write the request file
