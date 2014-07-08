@@ -37,8 +37,9 @@ soapui-project
 
 // Project is the root node of a SoapUI project.
 type Project struct {
-	Interface []Interface `xml:"interface"` // all deffed interfaces
-	TestSuite []TestSuite `xml:"testSuite"`
+	Interface []Interface `xml:"interface"`           // all deffed interfaces
+	TestSuite []TestSuite `xml:"testSuite"`           // all testsuites
+	Property  []Property  `xml:"properties>property"` // project-wide properties
 }
 
 // Print prints out the full project to the given writer, in a
@@ -52,10 +53,31 @@ func (p Project) Print(writer io.Writer) {
 		}
 	}
 
+	fmt.Fprintf(writer, "Project properties: %d\n", len(p.Property))
+	for _, p := range p.Property {
+		fmt.Fprintf(writer, "\t%s = %s\n", p.Name, p.Value)
+	}
+
+	fmt.Fprintln(writer)
+
 	for _, s := range p.TestSuite {
 		fmt.Fprintf(writer, "Testsuite '%s'\n", s.Name)
+		fmt.Fprintf(writer, "\tTestsuite properties: %d\n", len(s.Property))
+		for _, p := range s.Property {
+			fmt.Fprintf(writer, "\t\t%s = %s\n", p.Name, p.Value)
+		}
+
+		fmt.Fprintln(writer)
+
 		for _, t := range s.TestCase {
 			fmt.Printf("\tTestcase '%s'\n", t.Name)
+			fmt.Fprintf(writer, "\t\tTestcase properties: %d\n", len(t.Property))
+			for _, p := range t.Property {
+				fmt.Fprintf(writer, "\t\t\t%s = %s\n", p.Name, p.Value)
+			}
+
+			fmt.Fprintln(writer)
+
 			for _, ts := range t.TestStep {
 				fmt.Fprintf(writer, "\t\tName:        %s\n", ts.Name)
 				fmt.Fprintf(writer, "\t\tType:        %s\n", ts.Type)
@@ -74,12 +96,30 @@ func (p Project) Print(writer io.Writer) {
 					fmt.Fprintf(writer, "\t\tReq len:     %d\n", len(ts.Request.Content2))
 					fmt.Fprintf(writer, "\t\tAssertions:  %d\n", len(ts.Assertion))
 					fmt.Fprintf(writer, "\t\t (valid):    %d\n", len(ts.GetAssertions()))
-					fmt.Fprintf(writer, ts.Request.Content2)
 				}
 				fmt.Fprintln(writer)
 			}
 		}
 	}
+}
+
+// GetAllProperties finds all project propeties and puts them in a map.
+// The keys of the map will have the following form:
+//
+//	${#Project#some.property.name}
+//	${#Project#another.property.name}
+//
+// and so on.
+func (p Project) GetAllProperties() map[string]string {
+	m := make(map[string]string)
+
+	// get all project wide properties
+	for _, pp := range p.Property {
+		key := fmt.Sprintf("${#Project#%s}", pp.Name)
+		m[key] = pp.Value
+	}
+
+	return m
 }
 
 // FindSoapAction iterates through the interfaces and its operations to
@@ -116,12 +156,40 @@ type Operation struct {
 type TestSuite struct {
 	Name     string     `xml:"name,attr"`
 	TestCase []TestCase `xml:"testCase"`
+	Property []Property `xml:"properties>property"`
+}
+
+func (t TestSuite) GetAllProperties() map[string]string {
+	m := make(map[string]string)
+
+	// get all testsuite properties
+	for _, pp := range t.Property {
+		key := fmt.Sprintf("${#TestSuite#%s}", pp.Name)
+		m[key] = pp.Value
+	}
+
+	return m
+
 }
 
 // TestCase contains SoapUI test steps.
 type TestCase struct {
 	Name     string     `xml:"name,attr"`
 	TestStep []TestStep `xml:"testStep"`
+	Property []Property `xml:"properties>property"`
+}
+
+func (t TestCase) GetAllProperties() map[string]string {
+	m := make(map[string]string)
+
+	// get all testsuite properties
+	for _, pp := range t.Property {
+		key := fmt.Sprintf("${#TestCase#%s}", pp.Name)
+		m[key] = pp.Value
+	}
+
+	return m
+
 }
 
 // TestStep contains information about teststeps within a testcase.
@@ -203,6 +271,12 @@ type Assertion struct {
 	Token string `xml:"configuration>token"`
 }
 
+// Property contains project, testsuite or testcase properties.
+type Property struct {
+	Name  string `xml:"name"`
+	Value string `xml:"value"`
+}
+
 // ParseFile parses the given file to a Project struct. Will return
 // an error if anything failed.
 func ParseFile(file string) (Project, error) {
@@ -243,6 +317,23 @@ func MustCreateFile(file string) *os.File {
 	return outfile
 }
 
+// SearchAndReplace searches in the given text for all the keys given in the map, and
+// replaces them with the value belonging to that key.
+func SearchAndReplace(text string, kvs map[string]string) string {
+	for key, value := range kvs {
+		text = strings.Replace(text, key, value, -1)
+	}
+
+	return text
+}
+
+// MergeMap is a small utility function to copy all elements from the src map to the dst map.
+func MergeMap(src map[string]string, dst map[string]string) {
+	for k, v := range src {
+		dst[k] = v
+	}
+}
+
 // Process processes the given project and writes the generated output to the
 // (current) fixed '_generated' directory.
 func Process(p Project) {
@@ -261,13 +352,21 @@ func Process(p Project) {
 
 		fmt.Fprintf(outfile, "name = \"%s\"\n\n", s.Name)
 		for _, c := range s.TestCase {
+			// first, gather all possible properties for the underlying testcases
+			properties := p.GetAllProperties()
+			MergeMap(s.GetAllProperties(), properties)
+			MergeMap(c.GetAllProperties(), properties)
+
+			fmt.Println("MAP SIZE IS NOW", len(properties))
+
 			for _, step := range c.TestStep {
+
 				// write the request file
 				postDataFile := MustCreateFile(path.Join(testsuitePostdataDir, step.Name+".xml"))
 				if step.Type == "request" {
-					fmt.Fprintf(postDataFile, step.Request.Content)
+					fmt.Fprintf(postDataFile, SearchAndReplace(step.Request.Content, properties))
 				} else if step.Type == "httprequest" {
-					fmt.Fprintf(postDataFile, step.Request.Content2)
+					fmt.Fprintf(postDataFile, SearchAndReplace(step.Request.Content2, properties))
 				}
 				postDataFile.Close()
 
@@ -277,7 +376,7 @@ func Process(p Project) {
 				fmt.Fprintf(outfile, "timeout = %d\n", step.Request.GetTimeout())
 
 				if step.Type == "request" {
-					fmt.Fprintf(outfile, "url = \"%s\"\n", step.Request.Endpoint)
+					fmt.Fprintf(outfile, "url = \"%s\"\n", SearchAndReplace(step.Request.Endpoint, properties))
 					fmt.Fprintf(outfile, "headers = [\n")
 					fmt.Fprintf(outfile, "  \"SOAPAction: %s\",\n", p.FindSoapAction(step.Binding, step.Operation))
 					fmt.Fprintf(outfile, "  \"Content-Type: %s\"\n", "application/soap+xml")
@@ -289,7 +388,7 @@ func Process(p Project) {
 					fmt.Fprintf(outfile, "]\n")
 
 				} else if step.Type == "httprequest" {
-					fmt.Fprintf(outfile, "url = \"%s\"\n", step.Endpoint)
+					fmt.Fprintf(outfile, "url = \"%s\"\n", SearchAndReplace(step.Endpoint, properties))
 					fmt.Fprintf(outfile, "assertions = [\n")
 					for _, ass := range step.GetAssertions() {
 						fmt.Fprintf(outfile, "  \"%s\",\n", ass)

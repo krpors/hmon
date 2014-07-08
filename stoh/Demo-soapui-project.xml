@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<con:soapui-project xmlns:con="http://eviware.com/soapui/config" activeEnvironment="Default" name="Demo" resourceRoot="" soapui-version="4.5.2" abortOnError="false" runType="SEQUENTIAL">
+<con:soapui-project activeEnvironment="Default" name="Demo" resourceRoot="" soapui-version="4.5.2" abortOnError="false" runType="SEQUENTIAL" xmlns:con="http://eviware.com/soapui/config">
   <con:settings/>
-  <con:interface xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="con:WsdlInterface" wsaVersion="NONE" name="Inloggen-1.0EndpointBinding" type="wsdl" bindingName="{http://rivium.nl/servicepunt/services/viewpoint/Inloggen/1.0/wsdl/concrete}Inloggen-1.0EndpointBinding" soapVersion="1_1" anonymous="optional" definition="http://nlconvg00028:25000/Services/ViewPoint/Inloggen/1.0/ServiceAgents/Inloggen-1.0.serviceagent?wsdl">
+  <con:interface xsi:type="con:WsdlInterface" wsaVersion="NONE" name="Inloggen-1.0EndpointBinding" type="wsdl" bindingName="{http://rivium.nl/servicepunt/services/viewpoint/Inloggen/1.0/wsdl/concrete}Inloggen-1.0EndpointBinding" soapVersion="1_1" anonymous="optional" definition="http://nlconvg00028:25000/Services/ViewPoint/Inloggen/1.0/ServiceAgents/Inloggen-1.0.serviceagent?wsdl" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <con:settings/>
     <con:definitionCache type="TEXT" rootPart="http://nlconvg00028:25000/Services/ViewPoint/Inloggen/1.0/ServiceAgents/Inloggen-1.0.serviceagent?wsdl">
       <con:part>
@@ -130,7 +130,7 @@
       <con:settings/>
       <con:call name="ARICAN">
         <con:settings>
-          <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/&gt;</con:setting>
+          <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/></con:setting>
         </con:settings>
         <con:encoding>UTF-8</con:encoding>
         <con:endpoint>http://localhost:9000/servicepunt/services/viewpoint/Inloggen/1.0</con:endpoint>
@@ -153,7 +153,7 @@
       </con:call>
     </con:operation>
   </con:interface>
-  <con:interface xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="con:WsdlInterface" wsaVersion="NONE" name="GetHuishoudenOverzicht-1.0EndpointBinding" type="wsdl" bindingName="{http://rivium.nl/servicepunt/services/viewpoint/GetHuishoudenOverzicht/1.0/wsdl/concrete}GetHuishoudenOverzicht-1.0EndpointBinding" soapVersion="1_1" anonymous="optional" definition="http://nlconvg00028:25000/Services/ViewPoint/GetHuishoudenOverzicht/1.0/ServiceAgents/GetHuishoudenOverzicht-1.0.serviceagent?wsdl">
+  <con:interface xsi:type="con:WsdlInterface" wsaVersion="NONE" name="GetHuishoudenOverzicht-1.0EndpointBinding" type="wsdl" bindingName="{http://rivium.nl/servicepunt/services/viewpoint/GetHuishoudenOverzicht/1.0/wsdl/concrete}GetHuishoudenOverzicht-1.0EndpointBinding" soapVersion="1_1" anonymous="optional" definition="http://nlconvg00028:25000/Services/ViewPoint/GetHuishoudenOverzicht/1.0/ServiceAgents/GetHuishoudenOverzicht-1.0.serviceagent?wsdl" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <con:settings/>
     <con:definitionCache type="TEXT" rootPart="http://nlconvg00028:25000/Services/ViewPoint/GetHuishoudenOverzicht/1.0/ServiceAgents/GetHuishoudenOverzicht-1.0.serviceagent?wsdl">
       <con:part>
@@ -401,7 +401,7 @@
       <con:settings/>
       <con:call name="ARICAN (10006822)">
         <con:settings>
-          <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/&gt;</con:setting>
+          <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/></con:setting>
         </con:settings>
         <con:encoding>UTF-8</con:encoding>
         <con:endpoint>http://NLCONVG00028:25000/servicepunt/services/viewpoint/GetHuishoudenOverzicht/1.0</con:endpoint>
@@ -423,7 +423,7 @@
       </con:call>
     </con:operation>
   </con:interface>
-  <con:interface xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="con:WsdlInterface" wsaVersion="NONE" name="GetRelatieInfo-1.0EndpointBinding" type="wsdl" bindingName="{http://rivium.nl/servicepunt/services/viewpoint/GetRelatieInfo/1.0/wsdl/concrete}GetRelatieInfo-1.0EndpointBinding" soapVersion="1_1" anonymous="optional" definition="http://localhost:9000/Services/ViewPoint/GetRelatieInfo/1.0/ServiceAgents/GetRelatieInfo-1.0.serviceagent?wsdl">
+  <con:interface xsi:type="con:WsdlInterface" wsaVersion="NONE" name="GetRelatieInfo-1.0EndpointBinding" type="wsdl" bindingName="{http://rivium.nl/servicepunt/services/viewpoint/GetRelatieInfo/1.0/wsdl/concrete}GetRelatieInfo-1.0EndpointBinding" soapVersion="1_1" anonymous="optional" definition="http://localhost:9000/Services/ViewPoint/GetRelatieInfo/1.0/ServiceAgents/GetRelatieInfo-1.0.serviceagent?wsdl" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <con:settings/>
     <con:definitionCache type="TEXT" rootPart="http://localhost:9000/Services/ViewPoint/GetRelatieInfo/1.0/ServiceAgents/GetRelatieInfo-1.0.serviceagent?wsdl">
       <con:part>
@@ -622,7 +622,7 @@
       <con:settings/>
       <con:call name="Request 1">
         <con:settings>
-          <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/&gt;</con:setting>
+          <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/></con:setting>
         </con:settings>
         <con:encoding>UTF-8</con:encoding>
         <con:endpoint>http://10.11.2.12:25000/servicepunt/services/viewpoint/GetRelatieInfo/1.0</con:endpoint>
@@ -644,19 +644,19 @@
       </con:call>
     </con:operation>
   </con:interface>
-  <con:testSuite name="Demo">
+  <con:testSuite name="Soap-HTTP">
     <con:settings/>
     <con:runType>SEQUENTIAL</con:runType>
     <con:testCase failOnError="true" failTestCaseOnErrors="true" keepSession="false" maxResults="0" name="Service Checks" searchProperties="true" id="36ee1d8c-1cad-4929-ae4e-2a8248a354f8">
       <con:settings/>
       <con:testStep type="request" name="Inloggen-1.0">
         <con:settings/>
-        <con:config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="con:RequestStep">
+        <con:config xsi:type="con:RequestStep" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
           <con:interface>Inloggen-1.0EndpointBinding</con:interface>
           <con:operation>inloggen</con:operation>
           <con:request name="Inloggen-1.0" timeout="10000">
             <con:settings>
-              <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/&gt;</con:setting>
+              <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/></con:setting>
             </con:settings>
             <con:encoding>UTF-8</con:encoding>
             <con:endpoint>http://10.11.2.12:25000/servicepunt/services/viewpoint/Inloggen/1.0</con:endpoint>
@@ -689,12 +689,12 @@
       </con:testStep>
       <con:testStep type="request" name="GetRelatieInfo-1.0">
         <con:settings/>
-        <con:config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="con:RequestStep">
+        <con:config xsi:type="con:RequestStep" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
           <con:interface>GetRelatieInfo-1.0EndpointBinding</con:interface>
           <con:operation>getRelatieInfo</con:operation>
           <con:request name="GetRelatieInfo-1.0" timeout="15000">
             <con:settings>
-              <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/&gt;</con:setting>
+              <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/></con:setting>
             </con:settings>
             <con:encoding>UTF-8</con:encoding>
             <con:endpoint>http://10.11.2.12:25000/servicepunt/services/viewpoint/GetRelatieInfo/1.0</con:endpoint>
@@ -726,12 +726,12 @@
       </con:testStep>
       <con:testStep type="request" name="GetHuishoudenOverzicht-1.0">
         <con:settings/>
-        <con:config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="con:RequestStep">
+        <con:config xsi:type="con:RequestStep" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
           <con:interface>GetHuishoudenOverzicht-1.0EndpointBinding</con:interface>
           <con:operation>getHuishoudenOverzicht</con:operation>
           <con:request name="GetHuishoudenOverzicht-1.0" timeout="10500">
             <con:settings>
-              <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/&gt;</con:setting>
+              <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/></con:setting>
             </con:settings>
             <con:encoding>UTF-8</con:encoding>
             <con:endpoint>http://NLCONVG00028:25000/servicepunt/services/viewpoint/GetHuishoudenOverzicht/1.0</con:endpoint>
@@ -765,6 +765,11 @@
     </con:testCase>
     <con:properties/>
   </con:testSuite>
-  <con:properties/>
+  <con:testSuite name="HTTP Only"><con:settings/><con:runType>SEQUENTIAL</con:runType><con:testCase failOnError="true" failTestCaseOnErrors="true" keepSession="false" maxResults="0" name="Service Checks" searchProperties="true"><con:settings/><con:testStep type="httprequest" name="Test with properties"><con:settings/><con:config method="POST" xsi:type="con:HttpRequest" name="Test with properties" postQueryString="false" mediaType="application/xml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><con:settings><con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/></con:setting></con:settings><con:endpoint>${#Project#project.property.endpoint}</con:endpoint><con:request>Endpoint is: ${#Project#project.property.endpoint}
+Description is: ${#Project#project.property.desc}
+
+Hello ${#TestSuite#testsuite.property.hello}!
+Hark without a K is: ${#TestCase#testcase.property.whatsup}
+</con:request><con:credentials><con:authType>Global HTTP Settings</con:authType></con:credentials><con:jmsConfig JMSDeliveryMode="PERSISTENT"/><con:jmsPropertyConfig/><con:parameters/></con:config></con:testStep><con:properties><con:property><con:name>testcase.property.whatsup</con:name><con:value>har har</con:value></con:property></con:properties></con:testCase><con:properties><con:property><con:name>testsuite.property.hello</con:name><con:value>world</con:value></con:property></con:properties></con:testSuite><con:properties><con:property><con:name>project.property.endpoint</con:name><con:value>http://www.example.com</con:value></con:property><con:property><con:name>project.property.desc</con:name><con:value>a description</con:value></con:property></con:properties>
   <con:wssContainer/>
 </con:soapui-project>

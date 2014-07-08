@@ -125,7 +125,7 @@ func TestGetAssertions(t *testing.T) {
 	}
 }
 
-func TestGetTimeout(t* testing.T) {
+func TestGetTimeout(t *testing.T) {
 	p := prepareProject()
 	request := p.TestSuite[0].TestCase[0].TestStep[0].Request
 
@@ -133,4 +133,47 @@ func TestGetTimeout(t* testing.T) {
 	if timeout != 30000 {
 		t.Errorf("Expected a default of 30000 ms when timeout is not specified")
 	}
+}
+
+func TestSearchAndReplace(t *testing.T) {
+	m := make(map[string]string)
+	m["${#Project#project.property.endpoint}"] = "http://example.org"
+	m["${#Project#another.property}"] = "http://example.org"
+	m["${#TestSuite#prop.hello}"] = "world!"
+
+	text := "The endpoint is ${#Project#project.property.endpoint}. Hello ${#TestSuite#prop.hello}!"
+	text = SearchAndReplace(text, m)
+	if text != "The endpoint is http://example.org. Hello world!!" {
+		t.Errorf("Unexpected substitution: %s", text)
+	}
+}
+
+func TestMergeMap(t *testing.T) {
+	src := make(map[string]string)
+	dst := make(map[string]string)
+
+	src["Kevin"] = "Left handed"
+	src["Margot"] = "Right handed"
+
+	dst["Michael"] = "Right handed"
+	dst["Brunings"] = "Middle handed"
+
+	MergeMap(src, dst)
+
+	if _, found := dst["Kevin"]; !found {
+		t.Errorf("Expecting 'Kevin' in map")
+	}
+
+	if _, found := dst["Margot"]; !found {
+		t.Errorf("Expecting 'Margot' in map")
+	}
+
+	if _, found := dst["Michael"]; !found {
+		t.Errorf("Expecting 'Michael' in map")
+	}
+
+	if _, found := dst["Brunings"]; !found {
+		t.Errorf("Expecting 'Brunings' in map")
+	}
+
 }
