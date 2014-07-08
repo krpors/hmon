@@ -150,6 +150,22 @@ func writeCsv(filename string, results *[]ConfigurationResult) error {
 	return nil
 }
 
+// Sanitizes Pandora Agent data. In Pandora, you can use certain macro's to fill a command after an alert.
+// For instance, '_data_' is replaced with the module data. So if the module data contains the string:
+//
+//	assertion failed for regex `lala'
+//
+// then that text is replaced AS-IS for the _data_ string. Meaning if you want to execute a shell command,
+// the command will also contain a backtick character, thus failing. This function sanitizes the data by
+// removing the backtick (`), quote ('), double quote ("), backslash (\) character and exclamation point (!).
+func sanitizePandoraData(s string) string {
+    replacements := "`'\"\\!"
+    for _, char := range replacements {
+	s = strings.Replace(s, string(char), "", -1)
+    }
+    return s
+}
+
 // Writes all results to Pandora Agent interpretable XML files.
 func writePandoraAgents(outdir string, results *[]ConfigurationResult) error {
 	fmt.Printf("Writing %d configuration results to output directory '%s'\n", len(*results), outdir)
@@ -166,7 +182,7 @@ func writePandoraAgents(outdir string, results *[]ConfigurationResult) error {
 			module.Description = actualResult.Monitor.Description
 
 			if actualResult.Error != nil {
-				module.Data = actualResult.Error.Error()
+				module.Data = sanitizePandoraData(actualResult.Error.Error())
 				module.Type = "generic_data_string" // indicates string data
 				module.Status = "CRITICAL"
 			} else {
