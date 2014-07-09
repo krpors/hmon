@@ -15,7 +15,7 @@ import (
 )
 
 // the version string for hmon.
-const VERSION string = "1.1.0"
+const VERSION string = "1.2.0"
 
 // cmdline flag variables
 var (
